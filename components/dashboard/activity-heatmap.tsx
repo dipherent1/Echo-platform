@@ -79,7 +79,7 @@ export function ActivityHeatmap({ data }: ActivityHeatmapProps) {
             </div>
 
             {/* Grid */}
-            <TooltipProvider>
+            <TooltipProvider delayDuration={2000}>
               {DAYS.map((day, dayIndex) => {
                 // MongoDB dayOfWeek: 1=Sunday, 2=Monday, etc.
                 const mongoDay = dayIndex + 1

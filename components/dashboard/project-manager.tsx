@@ -22,10 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Trash2, FolderOpen, Globe, Link, Loader2 } from "lucide-react"
+import { Plus, Trash2, FolderOpen, Globe, Link, Loader2, ChevronDown, ChevronUp, X } from "lucide-react"
 
 interface ProjectRule {
-  type: "domain" | "url_contains"
+  type: "domain" | "url_contains" | "manual_url"
   value: string
 }
 
@@ -51,21 +51,45 @@ const COLORS = [
   "#84cc16",
 ]
 
+function getRuleIcon(type: string) {
+  switch (type) {
+    case "domain":
+      return <Globe className="h-4 w-4" />
+    case "url_contains":
+      return <Link className="h-4 w-4" />
+    case "manual_url":
+      return <Globe className="h-4 w-4" />
+    default:
+      return null
+  }
+}
+
+function getRuleLabel(type: string) {
+  switch (type) {
+    case "domain":
+      return "Domain:"
+    case "url_contains":
+      return "URL contains:"
+    case "manual_url":
+      return "URL:"
+    default:
+      return ""
+  }
+}
+
 export function ProjectManager() {
   const { token } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  const [expandedProject, setExpandedProject] = useState<string | null>(null)
   const [name, setName] = useState("")
   const [color, setColor] = useState(COLORS[0])
   const [rules, setRules] = useState<ProjectRule[]>([])
-  const [newRuleType, setNewRuleType] = useState<"domain" | "url_contains">("domain")
+  const [newRuleType, setNewRuleType] = useState<"domain" | "url_contains" | "manual_url">("domain")
   const [newRuleValue, setNewRuleValue] = useState("")
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
-  const [expandedProject, setExpandedProject] = useState<string | null>(null)
-  const [addingRuleToProject, setAddingRuleToProject] = useState<string | null>(null)
-  const [newProjectRuleType, setNewProjectRuleType] = useState<"domain" | "url_contains">("domain")
-  const [newProjectRuleValue, setNewProjectRuleValue] = useState("")
-  const [savingRule, setSavingRule] = useState(false)
+  const [addingUrl, setAddingUrl] = useState<string | null>(null)
+  const [newUrl, setNewUrl] = useState("")
 
   const fetcher = async (url: string) => {
     const res = await fetch(url, {
@@ -127,60 +151,54 @@ export function ProjectManager() {
 
       if (res.ok) {
         mutate("/api/projects")
+        setExpandedProject(null)
       }
     } finally {
       setDeleting(null)
     }
   }
 
-  const addRuleToProject = async (projectId: string, project: Project) => {
-    if (!newProjectRuleValue.trim()) return
+  const addUrlToProject = async (projectId: string) => {
+    if (!newUrl.trim()) return
 
-    setSavingRule(true)
+    setAddingUrl(projectId)
     try {
-      const updatedRules = [
-        ...project.rules,
-        { type: newProjectRuleType, value: newProjectRuleValue.trim() },
-      ]
-
       const res = await fetch(`/api/projects/${projectId}`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ rules: updatedRules }),
+        body: JSON.stringify({
+          addRule: { type: "manual_url", value: newUrl.trim() },
+        }),
       })
 
       if (res.ok) {
         mutate("/api/projects")
-        setNewProjectRuleValue("")
-        setNewProjectRuleType("domain")
+        setNewUrl("")
       }
     } finally {
-      setSavingRule(false)
+      setAddingUrl(null)
     }
   }
 
-  const removeRuleFromProject = async (projectId: string, project: Project, ruleIndex: number) => {
-    setSavingRule(true)
+  const removeUrlFromProject = async (projectId: string, ruleIndex: number) => {
     try {
-      const updatedRules = project.rules.filter((_, i) => i !== ruleIndex)
-
       const res = await fetch(`/api/projects/${projectId}`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ rules: updatedRules }),
+        body: JSON.stringify({ removeRuleIndex: ruleIndex }),
       })
 
       if (res.ok) {
         mutate("/api/projects")
       }
-    } finally {
-      setSavingRule(false)
+    } catch (error) {
+      console.error("Failed to remove URL:", error)
     }
   }
 
@@ -234,7 +252,7 @@ export function ProjectManager() {
               <div className="space-y-2">
                 <Label className="text-foreground">Matching Rules</Label>
                 <p className="text-xs text-muted-foreground">
-                  URLs matching these rules will be assigned to this project.
+                  URLs matching these rules will be assigned to this project. You can also add URLs manually later.
                 </p>
 
                 {rules.length > 0 && (
@@ -244,15 +262,11 @@ export function ProjectManager() {
                         key={index}
                         className="flex items-center gap-2 p-2 rounded-md bg-secondary"
                       >
-                        {rule.type === "domain" ? (
-                          <Globe className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Link className="h-4 w-4 text-muted-foreground" />
-                        )}
+                        {getRuleIcon(rule.type)}
                         <span className="text-xs text-muted-foreground">
-                          {rule.type === "domain" ? "Domain:" : "URL contains:"}
+                          {getRuleLabel(rule.type)}
                         </span>
-                        <span className="text-sm text-foreground flex-1">{rule.value}</span>
+                        <span className="text-sm text-foreground flex-1 truncate">{rule.value}</span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -269,9 +283,9 @@ export function ProjectManager() {
                 <div className="flex gap-2 mt-2">
                   <Select
                     value={newRuleType}
-                    onValueChange={(v) => setNewRuleType(v as "domain" | "url_contains")}
+                    onValueChange={(v) => setNewRuleType(v as "domain" | "url_contains" | "manual_url")}
                   >
-                    <SelectTrigger className="w-36 bg-secondary border-border text-foreground">
+                    <SelectTrigger className="w-40 bg-secondary border-border text-foreground">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
@@ -317,11 +331,14 @@ export function ProjectManager() {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : data?.projects && data.projects.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {data.projects.map((project) => (
-              <div key={project.id} className="rounded-lg bg-secondary/50">
+              <div
+                key={project.id}
+                className="rounded-lg bg-secondary/50 overflow-hidden"
+              >
                 <div className="flex items-center gap-3 p-3 hover:bg-secondary transition-colors cursor-pointer"
-                     onClick={() => setExpandedProject(expandedProject === project.id ? null : project.id)}>
+                  onClick={() => setExpandedProject(expandedProject === project.id ? null : project.id)}>
                   <div
                     className="h-4 w-4 rounded-sm flex-shrink-0"
                     style={{ backgroundColor: project.color }}
@@ -348,71 +365,64 @@ export function ProjectManager() {
                       <Trash2 className="h-4 w-4" />
                     )}
                   </Button>
+                  {expandedProject === project.id ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
                 </div>
 
                 {expandedProject === project.id && (
-                  <div className="border-t border-border p-3 bg-background/50 space-y-3">
-                    {/* Existing Rules */}
-                    {project.rules.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">URLs & Domains</p>
-                        {project.rules.map((rule, idx) => (
-                          <div key={idx} className="flex items-center gap-2 p-2 rounded-md bg-secondary/50">
-                            {rule.type === "domain" ? (
-                              <Globe className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            ) : (
-                              <Link className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            )}
-                            <span className="text-xs text-foreground flex-1 truncate">{rule.value}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeRuleFromProject(project.id, project, idx)}
-                              disabled={savingRule}
-                              className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                  <div className="border-t border-border bg-background/50 p-3 space-y-3">
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Rules</p>
+                      {project.rules.length > 0 ? (
+                        <div className="space-y-1">
+                          {project.rules.map((rule, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2 p-2 rounded-md bg-secondary/50 text-xs"
                             >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                              {getRuleIcon(rule.type)}
+                              <span className="text-muted-foreground">{getRuleLabel(rule.type)}</span>
+                              <span className="text-foreground flex-1 truncate">{rule.value}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeUrlFromProject(project.id, index)}
+                                className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">No rules added yet</p>
+                      )}
+                    </div>
 
-                    {/* Add New Rule */}
                     <div className="space-y-2 pt-2 border-t border-border">
-                      <p className="text-xs font-medium text-muted-foreground">Add URL or Domain</p>
-                      <div className="flex gap-1.5">
-                        <Select
-                          value={newProjectRuleType}
-                          onValueChange={(v) => setNewProjectRuleType(v as "domain" | "url_contains")}
-                        >
-                          <SelectTrigger className="w-24 h-8 bg-background border-border text-foreground text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border">
-                            <SelectItem value="domain">Domain</SelectItem>
-                            <SelectItem value="url_contains">Contains</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <p className="text-xs font-medium text-muted-foreground">Add URL</p>
+                      <div className="flex gap-2">
                         <Input
-                          placeholder={newProjectRuleType === "domain" ? "github.com" : "/path"}
-                          value={newProjectRuleValue}
-                          onChange={(e) => setNewProjectRuleValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              addRuleToProject(project.id, project)
-                            }
-                          }}
-                          className="h-8 flex-1 bg-background border-border text-foreground text-xs"
+                          placeholder="https://example.com"
+                          value={newUrl}
+                          onChange={(e) => setNewUrl(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && addUrlToProject(project.id)}
+                          className="bg-secondary border-border text-foreground text-xs"
                         />
                         <Button
-                          variant="secondary"
                           size="sm"
-                          onClick={() => addRuleToProject(project.id, project)}
-                          disabled={savingRule || !newProjectRuleValue.trim()}
-                          className="h-8 px-2"
+                          variant="secondary"
+                          onClick={() => addUrlToProject(project.id)}
+                          disabled={addingUrl === project.id || !newUrl.trim()}
                         >
-                          {savingRule ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                          {addingUrl === project.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Plus className="h-3 w-3" />
+                          )}
                         </Button>
                       </div>
                     </div>

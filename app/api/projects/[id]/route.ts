@@ -63,8 +63,36 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid project ID" }, { status: 400 })
     }
 
+    const project = await getProjectById(new ObjectId(id), user._id)
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 })
+    }
+
     const body = await request.json()
     const updates: Partial<{ name: string; color: string; rules: ProjectRule[] }> = {}
+
+    // Handle adding a single rule
+    if (body.addRule && body.addRule.type && body.addRule.value) {
+      const newRule: ProjectRule = {
+        type: body.addRule.type as "domain" | "url_contains" | "manual_url",
+        value: body.addRule.value,
+      }
+      updates.rules = [...(project.rules || []), newRule]
+    }
+    // Handle removing a rule by index
+    else if (typeof body.removeRuleIndex === "number") {
+      updates.rules = (project.rules || []).filter((_, index) => index !== body.removeRuleIndex)
+    }
+    // Handle full rules replacement
+    else if (body.rules && Array.isArray(body.rules)) {
+      updates.rules = body.rules.filter(
+        (rule: ProjectRule) =>
+          rule.type &&
+          (rule.type === "domain" || rule.type === "url_contains" || rule.type === "manual_url") &&
+          rule.value &&
+          typeof rule.value === "string"
+      )
+    }
 
     if (body.name && typeof body.name === "string") {
       updates.name = body.name
@@ -74,35 +102,25 @@ export async function PATCH(
       updates.color = body.color
     }
 
-    if (body.rules && Array.isArray(body.rules)) {
-      updates.rules = body.rules.filter(
-        (rule: ProjectRule) =>
-          rule.type &&
-          (rule.type === "domain" || rule.type === "url_contains") &&
-          rule.value &&
-          typeof rule.value === "string"
-      )
-    }
-
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "No valid updates provided" }, { status: 400 })
     }
 
-    const project = await updateProject(new ObjectId(id), user._id, updates)
+    const updatedProject = await updateProject(new ObjectId(id), user._id, updates)
 
-    if (!project) {
+    if (!updatedProject) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 })
     }
 
     return NextResponse.json({
       success: true,
       project: {
-        id: project._id.toString(),
-        name: project.name,
-        color: project.color,
-        rules: project.rules,
-        createdAt: project.createdAt,
-        updatedAt: project.updatedAt,
+        id: updatedProject._id.toString(),
+        name: updatedProject.name,
+        color: updatedProject.color,
+        rules: updatedProject.rules,
+        createdAt: updatedProject.createdAt,
+        updatedAt: updatedProject.updatedAt,
       },
     })
   } catch (error) {

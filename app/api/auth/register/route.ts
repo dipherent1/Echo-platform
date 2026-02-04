@@ -34,7 +34,10 @@ export async function POST(request: NextRequest) {
     logger.error("Registration failed", { meta: { error: message } })
 
     if (message === "User already exists") {
-      return NextResponse.json({ error: message }, { status: 409 })
+      return NextResponse.json(
+        { error: "An account with this email already exists. Please sign in instead." },
+        { status: 409 }
+      )
     }
 
     return NextResponse.json({ error: message }, { status: 500 })

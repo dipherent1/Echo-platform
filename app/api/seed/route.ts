@@ -250,7 +250,8 @@ export async function GET(request: NextRequest) {
     }
 
     const db = await getDb()
-    const user = await db.collection("users").findOne({ email })
+    // Query by username since email is stored in username field
+    const user = await db.collection("users").findOne({ username: email })
     
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -260,7 +261,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user: { email: user.email, username: user.username },
+      user: { username: user.username },
       stats,
     })
   } catch (error) {

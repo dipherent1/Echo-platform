@@ -22,10 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Trash2, FolderOpen, Globe, Link, Loader2, ChevronDown, ChevronUp, X } from "lucide-react"
+import { Plus, Trash2, FolderOpen, Globe, Link, Loader2 } from "lucide-react"
 
 interface ProjectRule {
-  type: "domain" | "url_contains" | "manual_url"
+  type: "domain" | "url_contains"
   value: string
 }
 
@@ -51,45 +51,16 @@ const COLORS = [
   "#84cc16",
 ]
 
-function getRuleIcon(type: string) {
-  switch (type) {
-    case "domain":
-      return <Globe className="h-4 w-4" />
-    case "url_contains":
-      return <Link className="h-4 w-4" />
-    case "manual_url":
-      return <Globe className="h-4 w-4" />
-    default:
-      return null
-  }
-}
-
-function getRuleLabel(type: string) {
-  switch (type) {
-    case "domain":
-      return "Domain:"
-    case "url_contains":
-      return "URL contains:"
-    case "manual_url":
-      return "URL:"
-    default:
-      return ""
-  }
-}
-
 export function ProjectManager() {
   const { token } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
-  const [expandedProject, setExpandedProject] = useState<string | null>(null)
   const [name, setName] = useState("")
   const [color, setColor] = useState(COLORS[0])
   const [rules, setRules] = useState<ProjectRule[]>([])
-  const [newRuleType, setNewRuleType] = useState<"domain" | "url_contains" | "manual_url">("domain")
+  const [newRuleType, setNewRuleType] = useState<"domain" | "url_contains">("domain")
   const [newRuleValue, setNewRuleValue] = useState("")
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
-  const [addingUrl, setAddingUrl] = useState<string | null>(null)
-  const [newUrl, setNewUrl] = useState("")
 
   const fetcher = async (url: string) => {
     const res = await fetch(url, {
@@ -151,54 +122,9 @@ export function ProjectManager() {
 
       if (res.ok) {
         mutate("/api/projects")
-        setExpandedProject(null)
       }
     } finally {
       setDeleting(null)
-    }
-  }
-
-  const addUrlToProject = async (projectId: string) => {
-    if (!newUrl.trim()) return
-
-    setAddingUrl(projectId)
-    try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          addRule: { type: "manual_url", value: newUrl.trim() },
-        }),
-      })
-
-      if (res.ok) {
-        mutate("/api/projects")
-        setNewUrl("")
-      }
-    } finally {
-      setAddingUrl(null)
-    }
-  }
-
-  const removeUrlFromProject = async (projectId: string, ruleIndex: number) => {
-    try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ removeRuleIndex: ruleIndex }),
-      })
-
-      if (res.ok) {
-        mutate("/api/projects")
-      }
-    } catch (error) {
-      console.error("Failed to remove URL:", error)
     }
   }
 
@@ -252,7 +178,7 @@ export function ProjectManager() {
               <div className="space-y-2">
                 <Label className="text-foreground">Matching Rules</Label>
                 <p className="text-xs text-muted-foreground">
-                  URLs matching these rules will be assigned to this project. You can also add URLs manually later.
+                  URLs matching these rules will be assigned to this project.
                 </p>
 
                 {rules.length > 0 && (
@@ -262,11 +188,15 @@ export function ProjectManager() {
                         key={index}
                         className="flex items-center gap-2 p-2 rounded-md bg-secondary"
                       >
-                        {getRuleIcon(rule.type)}
+                        {rule.type === "domain" ? (
+                          <Globe className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Link className="h-4 w-4 text-muted-foreground" />
+                        )}
                         <span className="text-xs text-muted-foreground">
-                          {getRuleLabel(rule.type)}
+                          {rule.type === "domain" ? "Domain:" : "URL contains:"}
                         </span>
-                        <span className="text-sm text-foreground flex-1 truncate">{rule.value}</span>
+                        <span className="text-sm text-foreground flex-1">{rule.value}</span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -283,9 +213,9 @@ export function ProjectManager() {
                 <div className="flex gap-2 mt-2">
                   <Select
                     value={newRuleType}
-                    onValueChange={(v) => setNewRuleType(v as "domain" | "url_contains" | "manual_url")}
+                    onValueChange={(v) => setNewRuleType(v as "domain" | "url_contains")}
                   >
-                    <SelectTrigger className="w-40 bg-secondary border-border text-foreground">
+                    <SelectTrigger className="w-36 bg-secondary border-border text-foreground">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
@@ -331,103 +261,35 @@ export function ProjectManager() {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : data?.projects && data.projects.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {data.projects.map((project) => (
               <div
                 key={project.id}
-                className="rounded-lg bg-secondary/50 overflow-hidden"
+                className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
               >
-                <div className="flex items-center gap-3 p-3 hover:bg-secondary transition-colors cursor-pointer"
-                  onClick={() => setExpandedProject(expandedProject === project.id ? null : project.id)}>
-                  <div
-                    className="h-4 w-4 rounded-sm flex-shrink-0"
-                    style={{ backgroundColor: project.color }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground">{project.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {project.rules.length} rule{project.rules.length !== 1 ? "s" : ""}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      deleteProject(project.id)
-                    }}
-                    disabled={deleting === project.id}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    {deleting === project.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                  {expandedProject === project.id ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
+                <div
+                  className="h-4 w-4 rounded-sm flex-shrink-0"
+                  style={{ backgroundColor: project.color }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground">{project.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {project.rules.length} rule{project.rules.length !== 1 ? "s" : ""}
+                  </p>
                 </div>
-
-                {expandedProject === project.id && (
-                  <div className="border-t border-border bg-background/50 p-3 space-y-3">
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">Rules</p>
-                      {project.rules.length > 0 ? (
-                        <div className="space-y-1">
-                          {project.rules.map((rule, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-2 p-2 rounded-md bg-secondary/50 text-xs"
-                            >
-                              {getRuleIcon(rule.type)}
-                              <span className="text-muted-foreground">{getRuleLabel(rule.type)}</span>
-                              <span className="text-foreground flex-1 truncate">{rule.value}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeUrlFromProject(project.id, index)}
-                                className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">No rules added yet</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2 pt-2 border-t border-border">
-                      <p className="text-xs font-medium text-muted-foreground">Add URL</p>
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="https://example.com"
-                          value={newUrl}
-                          onChange={(e) => setNewUrl(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && addUrlToProject(project.id)}
-                          className="bg-secondary border-border text-foreground text-xs"
-                        />
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => addUrlToProject(project.id)}
-                          disabled={addingUrl === project.id || !newUrl.trim()}
-                        >
-                          {addingUrl === project.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Plus className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => deleteProject(project.id)}
+                  disabled={deleting === project.id}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  {deleting === project.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
             ))}
           </div>

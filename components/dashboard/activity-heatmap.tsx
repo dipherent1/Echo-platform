@@ -113,19 +113,21 @@ export function ActivityHeatmap({ data }: ActivityHeatmapProps) {
                                 {item && item.topUrls.length > 0 && (
                                   <div className="space-y-1 pt-2 border-t border-border">
                                     <div className="text-xs font-semibold text-foreground">Top URLs:</div>
-                                    {item.topUrls.map((url, idx) => (
-                                      <div key={idx} className="text-xs">
-                                        <div className="truncate text-foreground font-medium">
-                                          {url.title || "Untitled"}
+                                    <div className="max-h-[180px] overflow-y-auto pr-2 space-y-1">
+                                      {item.topUrls.map((url, idx) => (
+                                        <div key={idx} className="text-xs">
+                                          <div className="truncate text-foreground font-medium">
+                                            {url.title || "Untitled"}
+                                          </div>
+                                          <div className="text-muted-foreground text-xs truncate">
+                                            {url.url}
+                                          </div>
+                                          <div className="text-muted-foreground text-xs">
+                                            {url.totalDurationFormatted}
+                                          </div>
                                         </div>
-                                        <div className="text-muted-foreground text-xs truncate">
-                                          {url.url}
-                                        </div>
-                                        <div className="text-muted-foreground text-xs">
-                                          {url.totalDurationFormatted}
-                                        </div>
-                                      </div>
-                                    ))}
+                                      ))}
+                                    </div>
                                   </div>
                                 )}
                               </div>

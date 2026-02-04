@@ -308,16 +308,3 @@ export async function POST() {
     )
   }
 }
-
-export default async function handler(req: NextRequest) {
-  try {
-    const result = await seedData()
-    return NextResponse.json(result)
-  } catch (error) {
-    console.error("Seed error:", error)
-    return NextResponse.json(
-      { error: "Failed to seed data" },
-      { status: 500 }
-    )
-  }
-}

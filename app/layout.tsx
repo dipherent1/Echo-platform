@@ -10,7 +10,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: 'Echo - Personal Productivity Tracker',
   description: 'Track your browsing time and visualize productivity patterns with Echo',
-  generator: 'v0.app',
+  generator: 'v0',
   icons: {
     icon: [
       {

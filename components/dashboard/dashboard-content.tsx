@@ -149,14 +149,14 @@ export function DashboardContent() {
           <ProjectChart data={stats?.byProject || []} />
         </div>
 
-        {/* Domain chart */}
-        <div className="mb-6">
-          <DomainChart data={stats?.byDomain || []} />
-        </div>
-
         {/* Heatmap */}
         <div className="mb-6">
           <ActivityHeatmap data={stats?.heatmap || []} />
+        </div>
+
+        {/* Domain chart */}
+        <div className="mb-6">
+          <DomainChart data={stats?.byDomain || []} />
         </div>
       </>
     )

@@ -122,7 +122,7 @@ async function seedData() {
     
     // Create a demo user
     const email = "demo@echo.dev"
-    const password = "demo123"
+    const password = "demo1234"
     
     // Check if user already exists
     let user = await db.collection("users").findOne({ email })

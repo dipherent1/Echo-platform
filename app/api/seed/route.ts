@@ -1,310 +1,271 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
 import { ObjectId } from "mongodb"
-import { hashPassword, generateToken, hashToken } from "@/lib/auth"
+import { getDb } from "@/lib/db"
+import { authenticateRequest } from "@/lib/auth"
+import { logger } from "@/lib/logger"
+import { getUserFromSession } from "@/lib/session" // Import getUserFromSession
+import type { Page, Project, ActivityLog } from "@/lib/types"
 
-const MOCK_DOMAINS = [
-  "github.com",
-  "stackoverflow.com",
-  "youtube.com",
-  "reddit.com",
-  "twitter.com",
-  "linkedin.com",
-  "medium.com",
-  "dev.to",
-  "vercel.com",
-  "nextjs.org",
-  "react.dev",
-  "tailwindcss.com",
+// Mock websites data - realistic browsing patterns
+const mockSites = [
+  // Development
+  { domain: "github.com", paths: ["/pulls", "/issues", "/notifications", "/explore", "/settings"], titles: ["Pull Requests", "Issues", "Notifications", "Explore GitHub", "Settings"], category: "development" },
+  { domain: "stackoverflow.com", paths: ["/questions", "/questions/tagged/react", "/questions/tagged/typescript", "/questions/tagged/nextjs"], titles: ["Stack Overflow", "React Questions", "TypeScript Questions", "Next.js Questions"], category: "development" },
+  { domain: "vercel.com", paths: ["/dashboard", "/docs", "/blog", "/analytics"], titles: ["Vercel Dashboard", "Vercel Documentation", "Vercel Blog", "Analytics"], category: "development" },
+  { domain: "nextjs.org", paths: ["/docs", "/docs/app/building-your-application", "/docs/api-reference", "/blog"], titles: ["Next.js Docs", "Building Your Application", "API Reference", "Next.js Blog"], category: "development" },
+  { domain: "tailwindcss.com", paths: ["/docs", "/docs/installation", "/docs/utility-first", "/blog"], titles: ["Tailwind CSS", "Installation", "Utility-First Fundamentals", "Tailwind Blog"], category: "development" },
+  { domain: "localhost:3000", paths: ["/", "/dashboard", "/settings", "/api-docs"], titles: ["Local Dev", "Dashboard", "Settings", "API Documentation"], category: "development" },
+  
+  // Communication
+  { domain: "mail.google.com", paths: ["/mail/u/0/#inbox", "/mail/u/0/#starred", "/mail/u/0/#sent"], titles: ["Inbox - Gmail", "Starred - Gmail", "Sent - Gmail"], category: "communication" },
+  { domain: "slack.com", paths: ["/client", "/messages", "/threads"], titles: ["Slack", "Messages", "Threads"], category: "communication" },
+  { domain: "discord.com", paths: ["/channels/@me", "/channels/server"], titles: ["Discord", "Server Chat"], category: "communication" },
+  
+  // Productivity
+  { domain: "notion.so", paths: ["/", "/workspace", "/notes", "/tasks"], titles: ["Notion", "Workspace", "Notes", "Tasks"], category: "productivity" },
+  { domain: "linear.app", paths: ["/team/issues", "/team/projects", "/team/cycles"], titles: ["Linear Issues", "Projects", "Cycles"], category: "productivity" },
+  { domain: "figma.com", paths: ["/files", "/design/project", "/prototype"], titles: ["Figma Files", "Design Project", "Prototype"], category: "productivity" },
+  
+  // Learning
+  { domain: "youtube.com", paths: ["/watch?v=abc123", "/playlist", "/@channel"], titles: ["TypeScript Tutorial", "React Playlist", "Dev Channel"], category: "learning" },
+  { domain: "udemy.com", paths: ["/course/react-complete", "/course/nextjs-complete"], titles: ["Complete React Course", "Next.js Complete Guide"], category: "learning" },
+  { domain: "medium.com", paths: ["/@author/article", "/topic/programming"], titles: ["Tech Article", "Programming Topic"], category: "learning" },
+  
+  // Social (distraction)
+  { domain: "twitter.com", paths: ["/home", "/notifications", "/explore"], titles: ["Twitter Home", "Notifications", "Explore"], category: "social" },
+  { domain: "reddit.com", paths: ["/r/programming", "/r/webdev", "/r/reactjs"], titles: ["r/programming", "r/webdev", "r/reactjs"], category: "social" },
+  { domain: "news.ycombinator.com", paths: ["/", "/newest", "/ask"], titles: ["Hacker News", "New", "Ask HN"], category: "social" },
 ]
 
-const MOCK_URLS = {
-  "github.com": [
-    "/facebook/react",
-    "/vercel/next.js",
-    "/microsoft/vscode",
-    "/pulls",
-    "/issues",
-  ],
-  "stackoverflow.com": [
-    "/questions/tagged/javascript",
-    "/questions/tagged/react",
-    "/questions/tagged/typescript",
-    "/questions/tagged/nextjs",
-  ],
-  "youtube.com": [
-    "/watch?v=dQw4w9WgXcQ",
-    "/watch?v=FKTxC9pl-WM",
-    "/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
-  ],
-  "reddit.com": [
-    "/r/programming",
-    "/r/webdev",
-    "/r/reactjs",
-    "/r/javascript",
-  ],
-  "twitter.com": ["/home", "/notifications", "/explore", "/messages"],
-  "linkedin.com": ["/feed", "/jobs", "/mynetwork", "/messaging"],
-  "medium.com": [
-    "/@dan_abramov/making-sense-of-react-hooks",
-    "/javascript-in-plain-english",
-  ],
-  "dev.to": ["/t/javascript", "/t/webdev", "/t/react", "/t/typescript"],
-  "vercel.com": ["/docs", "/templates", "/pricing", "/dashboard"],
-  "nextjs.org": ["/docs", "/learn", "/showcase", "/blog"],
-  "react.dev": ["/learn", "/reference", "/community", "/blog"],
-  "tailwindcss.com": ["/docs", "/components", "/examples", "/resources"],
+// Project definitions
+const projectDefinitions = [
+  { name: "Echo Development", color: "#22c55e", rules: [{ type: "domain" as const, value: "localhost:3000" }, { type: "url_contains" as const, value: "echo" }] },
+  { name: "Learning", color: "#3b82f6", rules: [{ type: "domain" as const, value: "youtube.com" }, { type: "domain" as const, value: "udemy.com" }, { type: "domain" as const, value: "medium.com" }] },
+  { name: "Communication", color: "#f59e0b", rules: [{ type: "domain" as const, value: "slack.com" }, { type: "domain" as const, value: "discord.com" }, { type: "domain" as const, value: "mail.google.com" }] },
+  { name: "Open Source", color: "#8b5cf6", rules: [{ type: "domain" as const, value: "github.com" }] },
+  { name: "Documentation", color: "#06b6d4", rules: [{ type: "domain" as const, value: "nextjs.org" }, { type: "domain" as const, value: "tailwindcss.com" }, { type: "domain" as const, value: "vercel.com" }] },
+]
+
+function getRandomElement<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
 }
 
-const MOCK_TITLES = {
-  "github.com": [
-    "React - A JavaScript library for building user interfaces",
-    "Next.js by Vercel - The React Framework",
-    "Visual Studio Code - Code Editing. Redefined",
-    "Pull Requests - GitHub",
-    "Issues - GitHub",
-  ],
-  "stackoverflow.com": [
-    "Newest JavaScript Questions - Stack Overflow",
-    "Newest React Questions - Stack Overflow",
-    "Newest TypeScript Questions - Stack Overflow",
-    "Newest Next.js Questions - Stack Overflow",
-  ],
-  "youtube.com": [
-    "Rick Astley - Never Gonna Give You Up - YouTube",
-    "JavaScript Tutorial for Beginners - YouTube",
-    "React Full Course - YouTube",
-  ],
-  "reddit.com": [
-    "r/programming - Reddit",
-    "r/webdev - Reddit",
-    "r/reactjs - Reddit",
-    "r/javascript - Reddit",
-  ],
-  "twitter.com": ["Home / Twitter", "Notifications / Twitter", "Explore / Twitter", "Messages / Twitter"],
-  "linkedin.com": ["Feed | LinkedIn", "Jobs | LinkedIn", "My Network | LinkedIn", "Messaging | LinkedIn"],
-  "medium.com": [
-    "Making Sense of React Hooks - Dan Abramov",
-    "JavaScript in Plain English - Medium",
-  ],
-  "dev.to": [
-    "JavaScript - DEV Community",
-    "Web Development - DEV Community",
-    "React - DEV Community",
-    "TypeScript - DEV Community",
-  ],
-  "vercel.com": ["Documentation - Vercel", "Templates - Vercel", "Pricing - Vercel", "Dashboard - Vercel"],
-  "nextjs.org": ["Documentation - Next.js", "Learn Next.js", "Showcase - Next.js", "Blog - Next.js"],
-  "react.dev": ["Learn React", "React Reference", "React Community", "React Blog"],
-  "tailwindcss.com": ["Documentation - Tailwind CSS", "Components - Tailwind CSS", "Examples - Tailwind CSS", "Resources - Tailwind CSS"],
+function getRandomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-function getRandomItem<T>(array: T[]): T {
-  return array[Math.floor(Math.random() * array.length)]
+// Generate weighted random site based on time of day
+function getWeightedSite(hour: number): typeof mockSites[0] {
+  // Work hours (9-18): more dev, productivity
+  // Evening (18-23): more social, learning
+  // Night (23-9): less activity overall
+  
+  const weights: Record<string, number> = {}
+  
+  if (hour >= 9 && hour < 18) {
+    // Work hours
+    weights.development = 40
+    weights.productivity = 25
+    weights.communication = 20
+    weights.learning = 10
+    weights.social = 5
+  } else if (hour >= 18 && hour < 23) {
+    // Evening
+    weights.development = 20
+    weights.learning = 30
+    weights.social = 30
+    weights.productivity = 10
+    weights.communication = 10
+  } else {
+    // Night/early morning
+    weights.social = 40
+    weights.learning = 30
+    weights.development = 20
+    weights.productivity = 5
+    weights.communication = 5
+  }
+  
+  const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0)
+  let random = Math.random() * totalWeight
+  
+  for (const category of Object.keys(weights)) {
+    random -= weights[category]
+    if (random <= 0) {
+      const categorySites = mockSites.filter(s => s.category === category)
+      return getRandomElement(categorySites)
+    }
+  }
+  
+  return getRandomElement(mockSites)
 }
 
-function getRandomDuration(): number {
-  // Random duration between 30 seconds and 30 minutes
-  const durations = [30, 60, 120, 180, 300, 600, 900, 1200, 1800]
-  return getRandomItem(durations)
-}
-
-function getRandomTimestamp(daysAgo: number): Date {
-  const now = new Date()
-  const start = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000)
-  const randomTime = start.getTime() + Math.random() * (now.getTime() - start.getTime())
-  return new Date(randomTime)
-}
-
-async function seedData() {
+export async function POST(request: NextRequest) {
   try {
-    const db = await getDb()
-    
-    // Create a demo user
-    const email = "demo@echo.dev"
-    const password = "demo1234"
-    
-    // Check if user already exists
-    let user = await db.collection("users").findOne({ email })
-    
+    const authHeader = request.headers.get("authorization")
+    const user = await authenticateRequest(authHeader)
     if (!user) {
-      const apiToken = generateToken()
-      const hashedApiToken = hashToken(apiToken)
-      
-      user = {
-        _id: new ObjectId(),
-        email,
-        password: await hashPassword(password),
-        apiToken: hashedApiToken,
-        createdAt: new Date(),
-      }
-      
-      await db.collection("users").insertOne(user)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-    
+
+    const db = await getDb()
     const userId = user._id
-    
-    // Create mock projects
-    const projects = [
-      {
-        _id: new ObjectId(),
-        userId,
-        name: "Open Source",
-        color: "#22c55e",
-        rules: [
-          { type: "domain", value: "github.com" },
-          { type: "domain", value: "stackoverflow.com" },
-        ],
-        createdAt: new Date(),
-      },
-      {
-        _id: new ObjectId(),
-        userId,
-        name: "Learning",
-        color: "#3b82f6",
-        rules: [
-          { type: "domain", value: "youtube.com" },
-          { type: "domain", value: "medium.com" },
-          { type: "domain", value: "dev.to" },
-        ],
-        createdAt: new Date(),
-      },
-      {
-        _id: new ObjectId(),
-        userId,
-        name: "Documentation",
-        color: "#8b5cf6",
-        rules: [
-          { type: "domain", value: "nextjs.org" },
-          { type: "domain", value: "react.dev" },
-          { type: "domain", value: "tailwindcss.com" },
-          { type: "domain", value: "vercel.com" },
-        ],
-        createdAt: new Date(),
-      },
-      {
-        _id: new ObjectId(),
-        userId,
-        name: "Social",
-        color: "#ec4899",
-        rules: [
-          { type: "domain", value: "twitter.com" },
-          { type: "domain", value: "linkedin.com" },
-          { type: "domain", value: "reddit.com" },
-        ],
-        createdAt: new Date(),
-      },
-    ]
-    
+
+    // Clear existing data for this user
+    await db.collection("pages").deleteMany({ userId })
     await db.collection("projects").deleteMany({ userId })
-    await db.collection("projects").insertMany(projects)
+    await db.collection("activity_logs").deleteMany({ "metadata.userId": userId })
+
+    logger.info("Cleared existing data for seed", { userId: userId.toString() })
+
+    // Create projects
+    const projectMap = new Map<string, ObjectId>()
+    const projectDocs: Project[] = []
     
-    // Generate mock activity logs for the last 7 days
-    const activityLogs = []
-    const entries = []
+    for (const proj of projectDefinitions) {
+      const projectId = new ObjectId()
+      projectMap.set(proj.name, projectId)
+      projectDocs.push({
+        _id: projectId,
+        userId,
+        name: proj.name,
+        color: proj.color,
+        rules: proj.rules,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
     
-    for (let day = 0; day < 7; day++) {
-      // Generate 20-40 logs per day
-      const logsPerDay = Math.floor(Math.random() * 20) + 20
+    await db.collection<Project>("projects").insertMany(projectDocs)
+    logger.info("Created projects", { count: projectDocs.length })
+
+    // Create pages and activity logs
+    const pageMap = new Map<string, ObjectId>()
+    const pageDocs: Page[] = []
+    const activityDocs: ActivityLog[] = []
+
+    // Generate data for last 14 days
+    const now = new Date()
+    const daysToGenerate = 14
+
+    for (let dayOffset = 0; dayOffset < daysToGenerate; dayOffset++) {
+      const date = new Date(now)
+      date.setDate(date.getDate() - dayOffset)
       
-      for (let i = 0; i < logsPerDay; i++) {
-        const domain = getRandomItem(MOCK_DOMAINS)
-        const urls = MOCK_URLS[domain as keyof typeof MOCK_URLS] || ["/"]
-        const titles = MOCK_TITLES[domain as keyof typeof MOCK_TITLES] || ["Page Title"]
-        const path = getRandomItem(urls)
-        const url = `https://${domain}${path}`
-        const title = getRandomItem(titles)
-        const duration = getRandomDuration()
-        const timestamp = getRandomTimestamp(day)
+      // Generate 20-60 activity sessions per day (less on weekends)
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6
+      const sessionsPerDay = isWeekend ? getRandomInt(10, 30) : getRandomInt(30, 60)
+      
+      for (let session = 0; session < sessionsPerDay; session++) {
+        // Random hour with realistic distribution (more activity 9am-11pm)
+        let hour: number
+        const rand = Math.random()
+        if (rand < 0.1) {
+          hour = getRandomInt(0, 8) // 10% early morning
+        } else if (rand < 0.8) {
+          hour = getRandomInt(9, 18) // 70% work hours
+        } else {
+          hour = getRandomInt(19, 23) // 20% evening
+        }
         
-        activityLogs.push({
-          userId,
-          url,
-          domain,
-          title,
-          duration,
+        const minute = getRandomInt(0, 59)
+        const timestamp = new Date(date)
+        timestamp.setHours(hour, minute, getRandomInt(0, 59), 0)
+        
+        // Get weighted site based on time
+        const site = getWeightedSite(hour)
+        const pathIndex = getRandomInt(0, site.paths.length - 1)
+        const url = `https://${site.domain}${site.paths[pathIndex]}`
+        const title = site.titles[pathIndex]
+        
+        // Get or create page
+        let pageId = pageMap.get(url)
+        if (!pageId) {
+          pageId = new ObjectId()
+          pageMap.set(url, pageId)
+          
+          const firstSeen = new Date(now)
+          firstSeen.setDate(firstSeen.getDate() - getRandomInt(dayOffset, daysToGenerate))
+          
+          pageDocs.push({
+            _id: pageId,
+            userId,
+            url,
+            domain: site.domain,
+            title,
+            description: null,
+            firstSeenAt: firstSeen,
+            lastSeenAt: timestamp,
+            ai: {
+              productivityLabel: site.category === "social" ? "distraction" : site.category === "development" ? "productive" : "neutral",
+              confidence: Math.random() * 0.3 + 0.7, // 0.7-1.0
+              embedding: null,
+            },
+          })
+        }
+        
+        // Match project
+        let projectId: ObjectId | null = null
+        for (const [projName, projId] of projectMap) {
+          const proj = projectDefinitions.find(p => p.name === projName)
+          if (proj) {
+            const matches = proj.rules.some(rule => {
+              if (rule.type === "domain") return site.domain === rule.value
+              if (rule.type === "url_contains") return url.includes(rule.value)
+              return false
+            })
+            if (matches) {
+              projectId = projId
+              break
+            }
+          }
+        }
+        
+        // Create activity log with realistic duration (30s - 30min)
+        const duration = getRandomInt(30, 1800)
+        
+        activityDocs.push({
+          _id: new ObjectId(),
           timestamp,
-          createdAt: new Date(),
-        })
-        
-        entries.push({
-          userId,
-          url,
-          domain,
-          title,
-          firstSeen: timestamp,
-          lastSeen: timestamp,
-          totalDuration: duration,
-          visitCount: 1,
+          duration,
+          pageId,
+          metadata: {
+            userId,
+            domain: site.domain,
+            projectId,
+            source: {
+              type: "extension",
+              deviceName: getRandomElement(["MacBook Pro", "Windows Desktop", "Linux Laptop"]),
+              clientId: `client_${getRandomInt(1000, 9999)}`,
+            },
+          },
         })
       }
     }
-    
-    // Clear existing data
-    await db.collection("activity_logs").deleteMany({ userId })
-    await db.collection("page_entries").deleteMany({ userId })
-    
-    // Insert mock data
-    await db.collection("activity_logs").insertMany(activityLogs)
-    
-    // Aggregate page entries (combine duplicates)
-    const pageMap = new Map<string, typeof entries[0]>()
-    
-    for (const entry of entries) {
-      const key = `${entry.url}`
-      if (pageMap.has(key)) {
-        const existing = pageMap.get(key)!
-        existing.totalDuration += entry.totalDuration
-        existing.visitCount += 1
-        existing.lastSeen = entry.lastSeen > existing.lastSeen ? entry.lastSeen : existing.lastSeen
-      } else {
-        pageMap.set(key, entry)
-      }
+
+    // Insert pages
+    if (pageDocs.length > 0) {
+      await db.collection<Page>("pages").insertMany(pageDocs)
+      logger.info("Created pages", { count: pageDocs.length })
     }
-    
-    await db.collection("page_entries").insertMany(Array.from(pageMap.values()))
-    
-    return {
+
+    // Insert activity logs
+    if (activityDocs.length > 0) {
+      await db.collection<ActivityLog>("activity_logs").insertMany(activityDocs)
+      logger.info("Created activity logs", { count: activityDocs.length })
+    }
+
+    return NextResponse.json({
       success: true,
-      message: "Mock data seeded successfully",
       stats: {
-        projects: projects.length,
-        activityLogs: activityLogs.length,
-        pageEntries: pageMap.size,
+        projects: projectDocs.length,
+        pages: pageDocs.length,
+        activityLogs: activityDocs.length,
+        daysGenerated: daysToGenerate,
       },
-      credentials: {
-        email,
-        password,
-      },
-    }
+    })
   } catch (error) {
-    console.error("Seed error:", error)
-    throw error
-  }
-}
-
-export async function GET() {
-  try {
-    const result = await seedData()
-    return NextResponse.json(result)
-  } catch (error) {
-    console.error("Seed error:", error)
-    return NextResponse.json(
-      { error: "Failed to seed data" },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST() {
-  try {
-    const result = await seedData()
-    return NextResponse.json(result)
-  } catch (error) {
-    console.error("Seed error:", error)
-    return NextResponse.json(
-      { error: "Failed to seed data" },
-      { status: 500 }
-    )
+    const message = error instanceof Error ? error.message : "Seed failed"
+    logger.error("Seed failed", { meta: { error: message } })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

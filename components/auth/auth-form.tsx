@@ -56,17 +56,6 @@ export function AuthForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLogin && (
-            <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 text-sm">
-              <p className="text-foreground font-medium mb-1">Demo Account</p>
-              <p className="text-muted-foreground">
-                Visit <a href="/api/seed" className="text-primary hover:underline font-mono">/api/seed</a> to create demo account
-              </p>
-              <p className="text-muted-foreground mt-1">
-                <span className="font-mono text-xs">demo@echo.dev</span> / <span className="font-mono text-xs">demo1234</span>
-              </p>
-            </div>
-          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">

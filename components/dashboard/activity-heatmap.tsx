@@ -1,11 +1,25 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
+interface TopUrl {
+  title: string
+  url: string
+  totalDuration: number
+  totalDurationFormatted: string
+}
 
 interface HeatmapData {
   hour: number
   dayOfWeek: number
   totalDuration: number
+  topUrls: TopUrl[]
 }
 
 interface ActivityHeatmapProps {
@@ -34,12 +48,12 @@ function formatDuration(seconds: number): string {
 
 export function ActivityHeatmap({ data }: ActivityHeatmapProps) {
   // Build a map for quick lookup
-  const dataMap = new Map<string, number>()
+  const dataMap = new Map<string, HeatmapData>()
   let maxDuration = 0
 
   data.forEach((item) => {
     const key = `${item.dayOfWeek}-${item.hour}`
-    dataMap.set(key, item.totalDuration)
+    dataMap.set(key, item)
     if (item.totalDuration > maxDuration) maxDuration = item.totalDuration
   })
 
@@ -65,30 +79,65 @@ export function ActivityHeatmap({ data }: ActivityHeatmapProps) {
             </div>
 
             {/* Grid */}
-            {DAYS.map((day, dayIndex) => {
-              // MongoDB dayOfWeek: 1=Sunday, 2=Monday, etc.
-              const mongoDay = dayIndex + 1
-              return (
-                <div key={day} className="flex items-center gap-1 mb-1">
-                  <div className="w-10 text-xs text-muted-foreground text-right pr-2">
-                    {day}
+            <TooltipProvider>
+              {DAYS.map((day, dayIndex) => {
+                // MongoDB dayOfWeek: 1=Sunday, 2=Monday, etc.
+                const mongoDay = dayIndex + 1
+                return (
+                  <div key={day} className="flex items-center gap-1 mb-1">
+                    <div className="w-10 text-xs text-muted-foreground text-right pr-2">
+                      {day}
+                    </div>
+                    <div className="flex flex-1 gap-0.5">
+                      {HOURS.map((hour) => {
+                        const key = `${mongoDay}-${hour}`
+                        const item = dataMap.get(key)
+                        const duration = item?.totalDuration || 0
+                        const intensity = getIntensity(duration, maxDuration)
+
+                        return (
+                          <Tooltip key={hour}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={`h-4 flex-1 rounded-sm ${intensity} transition-colors cursor-pointer hover:ring-1 hover:ring-foreground`}
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-sm">
+                              <div className="space-y-2">
+                                <div className="font-semibold text-foreground">
+                                  {day} {hour.toString().padStart(2, "0")}:00
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Time Spent: {formatDuration(duration)}
+                                </div>
+                                {item && item.topUrls.length > 0 && (
+                                  <div className="space-y-1 pt-2 border-t border-border">
+                                    <div className="text-xs font-semibold text-foreground">Top URLs:</div>
+                                    {item.topUrls.map((url, idx) => (
+                                      <div key={idx} className="text-xs">
+                                        <div className="truncate text-foreground font-medium">
+                                          {url.title || "Untitled"}
+                                        </div>
+                                        <div className="text-muted-foreground text-xs truncate">
+                                          {url.url}
+                                        </div>
+                                        <div className="text-muted-foreground text-xs">
+                                          {url.totalDurationFormatted}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )
+                      })}
+                    </div>
                   </div>
-                  <div className="flex flex-1 gap-0.5">
-                    {HOURS.map((hour) => {
-                      const key = `${mongoDay}-${hour}`
-                      const duration = dataMap.get(key) || 0
-                      return (
-                        <div
-                          key={hour}
-                          className={`h-4 flex-1 rounded-sm ${getIntensity(duration, maxDuration)} transition-colors`}
-                          title={`${day} ${hour}:00 - ${formatDuration(duration)}`}
-                        />
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </TooltipProvider>
 
             {/* Legend */}
             <div className="flex items-center justify-end gap-2 mt-4 pt-2 border-t border-border">

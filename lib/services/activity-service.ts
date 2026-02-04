@@ -79,7 +79,7 @@ export interface TimeStats {
   totalDuration: number
   byProject: Array<{ projectId: ObjectId | null; projectName: string | null; color: string | null; totalDuration: number }>
   byDomain: Array<{ domain: string; totalDuration: number }>
-  byHour: Array<{ hour: number; dayOfWeek: number; totalDuration: number }>
+  byHour: Array<{ hour: number; dayOfWeek: number; totalDuration: number; topUrls: Array<{ title: string; url: string; totalDuration: number }> }>
   topPages: Array<{ pageId: ObjectId; title: string; url: string; domain: string; totalDuration: number }>
 }
 
@@ -170,8 +170,8 @@ export async function getTimeStats(
     ])
     .toArray()
 
-  // By hour (for heatmap)
-  const byHour = await db
+  // By hour (for heatmap) - with top URLs
+  const byHourDetails = await db
     .collection<ActivityLog>("activity_logs")
     .aggregate([
       {
@@ -181,16 +181,34 @@ export async function getTimeStats(
         },
       },
       {
+        $lookup: {
+          from: "pages",
+          localField: "pageId",
+          foreignField: "_id",
+          as: "page",
+        },
+      },
+      { $unwind: { path: "$page", preserveNullAndEmptyArrays: true } },
+      {
         $project: {
           hour: { $hour: "$timestamp" },
           dayOfWeek: { $dayOfWeek: "$timestamp" },
           duration: 1,
+          pageTitle: { $ifNull: ["$page.title", "Unknown"] },
+          pageUrl: { $ifNull: ["$page.url", "Unknown"] },
         },
       },
       {
         $group: {
           _id: { hour: "$hour", dayOfWeek: "$dayOfWeek" },
           totalDuration: { $sum: "$duration" },
+          urls: {
+            $push: {
+              title: "$pageTitle",
+              url: "$pageUrl",
+              duration: "$duration",
+            },
+          },
         },
       },
       {
@@ -198,10 +216,41 @@ export async function getTimeStats(
           hour: "$_id.hour",
           dayOfWeek: "$_id.dayOfWeek",
           totalDuration: 1,
+          urls: 1,
         },
       },
     ])
     .toArray()
+
+  // Process the URLs: aggregate by URL and sort by total duration
+  const byHour = byHourDetails.map((item: any) => {
+    const urlMap = new Map<string, { title: string; url: string; totalDuration: number }>()
+    
+    item.urls.forEach((u: any) => {
+      const key = u.url
+      if (urlMap.has(key)) {
+        const existing = urlMap.get(key)!
+        existing.totalDuration += u.duration
+      } else {
+        urlMap.set(key, {
+          title: u.title,
+          url: u.url,
+          totalDuration: u.duration,
+        })
+      }
+    })
+
+    const topUrls = Array.from(urlMap.values())
+      .sort((a, b) => b.totalDuration - a.totalDuration)
+      .slice(0, 5)
+
+    return {
+      hour: item.hour,
+      dayOfWeek: item.dayOfWeek,
+      totalDuration: item.totalDuration,
+      topUrls,
+    }
+  })
 
   // Top pages
   const topPages = await db

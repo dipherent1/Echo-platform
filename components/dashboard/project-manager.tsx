@@ -61,6 +61,11 @@ export function ProjectManager() {
   const [newRuleValue, setNewRuleValue] = useState("")
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [expandedProject, setExpandedProject] = useState<string | null>(null)
+  const [addingRuleToProject, setAddingRuleToProject] = useState<string | null>(null)
+  const [newProjectRuleType, setNewProjectRuleType] = useState<"domain" | "url_contains">("domain")
+  const [newProjectRuleValue, setNewProjectRuleValue] = useState("")
+  const [savingRule, setSavingRule] = useState(false)
 
   const fetcher = async (url: string) => {
     const res = await fetch(url, {
@@ -125,6 +130,57 @@ export function ProjectManager() {
       }
     } finally {
       setDeleting(null)
+    }
+  }
+
+  const addRuleToProject = async (projectId: string, project: Project) => {
+    if (!newProjectRuleValue.trim()) return
+
+    setSavingRule(true)
+    try {
+      const updatedRules = [
+        ...project.rules,
+        { type: newProjectRuleType, value: newProjectRuleValue.trim() },
+      ]
+
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ rules: updatedRules }),
+      })
+
+      if (res.ok) {
+        mutate("/api/projects")
+        setNewProjectRuleValue("")
+        setNewProjectRuleType("domain")
+      }
+    } finally {
+      setSavingRule(false)
+    }
+  }
+
+  const removeRuleFromProject = async (projectId: string, project: Project, ruleIndex: number) => {
+    setSavingRule(true)
+    try {
+      const updatedRules = project.rules.filter((_, i) => i !== ruleIndex)
+
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ rules: updatedRules }),
+      })
+
+      if (res.ok) {
+        mutate("/api/projects")
+      }
+    } finally {
+      setSavingRule(false)
     }
   }
 
@@ -263,33 +319,105 @@ export function ProjectManager() {
         ) : data?.projects && data.projects.length > 0 ? (
           <div className="space-y-3">
             {data.projects.map((project) => (
-              <div
-                key={project.id}
-                className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
-              >
-                <div
-                  className="h-4 w-4 rounded-sm flex-shrink-0"
-                  style={{ backgroundColor: project.color }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground">{project.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {project.rules.length} rule{project.rules.length !== 1 ? "s" : ""}
-                  </p>
+              <div key={project.id} className="rounded-lg bg-secondary/50">
+                <div className="flex items-center gap-3 p-3 hover:bg-secondary transition-colors cursor-pointer"
+                     onClick={() => setExpandedProject(expandedProject === project.id ? null : project.id)}>
+                  <div
+                    className="h-4 w-4 rounded-sm flex-shrink-0"
+                    style={{ backgroundColor: project.color }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground">{project.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {project.rules.length} rule{project.rules.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      deleteProject(project.id)
+                    }}
+                    disabled={deleting === project.id}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    {deleting === project.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteProject(project.id)}
-                  disabled={deleting === project.id}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  {deleting === project.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </Button>
+
+                {expandedProject === project.id && (
+                  <div className="border-t border-border p-3 bg-background/50 space-y-3">
+                    {/* Existing Rules */}
+                    {project.rules.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">URLs & Domains</p>
+                        {project.rules.map((rule, idx) => (
+                          <div key={idx} className="flex items-center gap-2 p-2 rounded-md bg-secondary/50">
+                            {rule.type === "domain" ? (
+                              <Globe className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            ) : (
+                              <Link className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            )}
+                            <span className="text-xs text-foreground flex-1 truncate">{rule.value}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeRuleFromProject(project.id, project, idx)}
+                              disabled={savingRule}
+                              className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add New Rule */}
+                    <div className="space-y-2 pt-2 border-t border-border">
+                      <p className="text-xs font-medium text-muted-foreground">Add URL or Domain</p>
+                      <div className="flex gap-1.5">
+                        <Select
+                          value={newProjectRuleType}
+                          onValueChange={(v) => setNewProjectRuleType(v as "domain" | "url_contains")}
+                        >
+                          <SelectTrigger className="w-24 h-8 bg-background border-border text-foreground text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-card border-border">
+                            <SelectItem value="domain">Domain</SelectItem>
+                            <SelectItem value="url_contains">Contains</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          placeholder={newProjectRuleType === "domain" ? "github.com" : "/path"}
+                          value={newProjectRuleValue}
+                          onChange={(e) => setNewProjectRuleValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              addRuleToProject(project.id, project)
+                            }
+                          }}
+                          className="h-8 flex-1 bg-background border-border text-foreground text-xs"
+                        />
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => addRuleToProject(project.id, project)}
+                          disabled={savingRule || !newProjectRuleValue.trim()}
+                          className="h-8 px-2"
+                        >
+                          {savingRule ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

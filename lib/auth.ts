@@ -1,8 +1,10 @@
-import { createHash, randomBytes } from "crypto"
-import bcrypt from "bcryptjs"
+import { createHash, randomBytes, scrypt, timingSafeEqual } from "crypto"
+import { promisify } from "util"
 import { getDb } from "./db"
 import type { User } from "./types"
 import { ObjectId } from "mongodb"
+
+const scryptAsync = promisify(scrypt)
 
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex")
@@ -13,12 +15,20 @@ export function generateToken(): string {
 }
 
 export async function hashPassword(password: string): Promise<string> {
-  const salt = await bcrypt.genSalt(10)
-  return bcrypt.hash(password, salt)
+  const salt = randomBytes(16).toString("hex")
+  const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer
+  return `${salt}:${derivedKey.toString("hex")}`
 }
 
 export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
-  return bcrypt.compare(password, storedHash)
+  try {
+    const [salt, hash] = storedHash.split(":")
+    const derivedKey = (await scryptAsync(password, salt, 64)) as Buffer
+    const hashBuffer = Buffer.from(hash, "hex")
+    return timingSafeEqual(derivedKey, hashBuffer)
+  } catch {
+    return false
+  }
 }
 
 export async function getUserByToken(token: string): Promise<User | null> {

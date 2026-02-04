@@ -11,7 +11,6 @@ import { ProjectChart } from "./project-chart"
 import { DomainChart } from "./domain-chart"
 import { ActivityHeatmap } from "./activity-heatmap"
 import { ActivityFeed } from "./activity-feed"
-import { TopPages } from "./top-pages"
 import { ProjectManager } from "./project-manager"
 import { TokenView } from "./token-view"
 import { PagesView } from "./pages-view"
@@ -146,19 +145,18 @@ export function DashboardContent() {
 
         {/* Charts row */}
         <div className="grid gap-4 lg:grid-cols-2 mb-6">
+          <ActivityFeed data={stats?.recentActivity || []} />
           <ProjectChart data={stats?.byProject || []} />
+        </div>
+
+        {/* Domain chart */}
+        <div className="mb-6">
           <DomainChart data={stats?.byDomain || []} />
         </div>
 
         {/* Heatmap */}
         <div className="mb-6">
           <ActivityHeatmap data={stats?.heatmap || []} />
-        </div>
-
-        {/* Bottom row */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          <TopPages data={stats?.topPages || []} />
-          <ActivityFeed data={stats?.recentActivity || []} />
         </div>
       </>
     )

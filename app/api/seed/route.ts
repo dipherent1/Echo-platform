@@ -116,9 +116,8 @@ function getRandomTimestamp(daysAgo: number): Date {
   return new Date(randomTime)
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const db = await getDb()
+async function seedData() {
+  const db = await getDb()
     
     // Create a demo user
     const email = "demo@echo.dev"
@@ -264,7 +263,7 @@ export async function POST(request: NextRequest) {
     
     await db.collection("page_entries").insertMany(Array.from(pageMap.values()))
     
-    return NextResponse.json({
+    return {
       success: true,
       message: "Mock data seeded successfully",
       stats: {
@@ -276,7 +275,43 @@ export async function POST(request: NextRequest) {
         email,
         password,
       },
-    })
+    }
+  } catch (error) {
+    console.error("Seed error:", error)
+    throw error
+  }
+}
+
+export async function GET() {
+  try {
+    const result = await seedData()
+    return NextResponse.json(result)
+  } catch (error) {
+    console.error("Seed error:", error)
+    return NextResponse.json(
+      { error: "Failed to seed data" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST() {
+  try {
+    const result = await seedData()
+    return NextResponse.json(result)
+  } catch (error) {
+    console.error("Seed error:", error)
+    return NextResponse.json(
+      { error: "Failed to seed data" },
+      { status: 500 }
+    )
+  }
+}
+
+export default async function handler(req: NextRequest) {
+  try {
+    const result = await seedData()
+    return NextResponse.json(result)
   } catch (error) {
     console.error("Seed error:", error)
     return NextResponse.json(

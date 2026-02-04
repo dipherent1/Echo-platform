@@ -84,6 +84,12 @@ export async function GET(request: NextRequest) {
         hour: h.hour,
         dayOfWeek: h.dayOfWeek,
         totalDuration: h.totalDuration,
+        topUrls: h.topUrls.map((u) => ({
+          title: u.title,
+          url: u.url,
+          totalDuration: u.totalDuration,
+          totalDurationFormatted: formatDuration(u.totalDuration),
+        })),
       })),
       topPages: stats.topPages.map((p) => ({
         pageId: p.pageId.toString(),

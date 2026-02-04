@@ -93,7 +93,7 @@ export function ActivityFeed({ data }: ActivityFeedProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3 min-h-[400px]">
+        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
           {paginatedData.map((activity) => {
             const displayTitle = activity.page?.title || activity.page?.url || activity.domain
             const displayUrl = activity.page?.url || `http://${activity.domain}`

@@ -146,7 +146,7 @@ export function DashboardContent() {
         {/* Charts row */}
         <div className="grid gap-4 lg:grid-cols-2 mb-6">
           <ActivityFeed data={stats?.recentActivity || []} />
-          <ProjectChart data={stats?.byProject || []} />
+          <DomainChart data={stats?.byDomain || []} />
         </div>
 
         {/* Heatmap */}
@@ -154,9 +154,9 @@ export function DashboardContent() {
           <ActivityHeatmap data={stats?.heatmap || []} />
         </div>
 
-        {/* Domain chart */}
+        {/* Project chart */}
         <div className="mb-6">
-          <DomainChart data={stats?.byDomain || []} />
+          <ProjectChart data={stats?.byProject || []} />
         </div>
       </>
     )

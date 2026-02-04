@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
+import { PieChart, Pie, Cell } from "recharts"
 
 interface ProjectData {
   projectId: string | null
@@ -50,38 +50,36 @@ export function ProjectChart({ data }: ProjectChartProps) {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    formatter={(value, name) => (
-                      <div className="flex items-center gap-2">
-                        <span>{name}</span>
-                        <span className="font-mono">
-                          {data.find((d) => d.projectName === name)?.totalDurationFormatted}
-                        </span>
-                      </div>
-                    )}
-                  />
-                }
-              />
-              <Pie
-                data={data}
-                dataKey="totalDuration"
-                nameKey="projectName"
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+          <PieChart width={533} height={300}>
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  formatter={(value, name) => (
+                    <div className="flex items-center gap-2">
+                      <span>{name}</span>
+                      <span className="font-mono">
+                        {data.find((d) => d.projectName === name)?.totalDurationFormatted}
+                      </span>
+                    </div>
+                  )}
+                />
+              }
+            />
+            <Pie
+              data={data}
+              dataKey="totalDuration"
+              nameKey="projectName"
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={100}
+              paddingAngle={2}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" />
+              ))}
+            </Pie>
+          </PieChart>
         </ChartContainer>
         <div className="mt-4 flex flex-wrap gap-3">
           {data.map((item) => (

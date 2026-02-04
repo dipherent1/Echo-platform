@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Trash2, FolderOpen, Globe, Link, Loader2 } from "lucide-react"
+import { Plus, Trash2, FolderOpen, Globe, Link, Loader2, Edit2 } from "lucide-react"
 
 interface ProjectRule {
   type: "domain" | "url_contains"
@@ -54,6 +54,7 @@ const COLORS = [
 export function ProjectManager() {
   const { token } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState("")
   const [color, setColor] = useState(COLORS[0])
   const [rules, setRules] = useState<ProjectRule[]>([])
@@ -91,8 +92,11 @@ export function ProjectManager() {
 
     setLoading(true)
     try {
-      const res = await fetch("/api/projects", {
-        method: "POST",
+      const url = editingId ? `/api/projects/${editingId}` : "/api/projects"
+      const method = editingId ? "PATCH" : "POST"
+
+      const res = await fetch(url, {
+        method,
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -103,6 +107,7 @@ export function ProjectManager() {
       if (res.ok) {
         mutate("/api/projects")
         setIsOpen(false)
+        setEditingId(null)
         setName("")
         setColor(COLORS[0])
         setRules([])
@@ -110,6 +115,23 @@ export function ProjectManager() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const startEdit = (project: Project) => {
+    setEditingId(project.id)
+    setName(project.name)
+    setColor(project.color)
+    setRules(project.rules)
+    setIsOpen(true)
+  }
+
+  const resetForm = () => {
+    setIsOpen(false)
+    setEditingId(null)
+    setName("")
+    setColor(COLORS[0])
+    setRules([])
+    setNewRuleValue("")
   }
 
   const deleteProject = async (id: string) => {
@@ -132,7 +154,7 @@ export function ProjectManager() {
     <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-foreground">Projects</CardTitle>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && resetForm()}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1">
               <Plus className="h-4 w-4" />
@@ -141,9 +163,13 @@ export function ProjectManager() {
           </DialogTrigger>
           <DialogContent className="bg-card border-border">
             <DialogHeader>
-              <DialogTitle className="text-foreground">Create Project</DialogTitle>
+              <DialogTitle className="text-foreground">
+                {editingId ? "Edit Project" : "Create Project"}
+              </DialogTitle>
               <DialogDescription className="text-muted-foreground">
-                Create a project to automatically categorize your browsing activity.
+                {editingId
+                  ? "Update project details and manage rules."
+                  : "Create a project to automatically categorize your browsing activity."}
               </DialogDescription>
             </DialogHeader>
 
@@ -238,17 +264,17 @@ export function ProjectManager() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setIsOpen(false)}>
+              <Button variant="ghost" onClick={resetForm}>
                 Cancel
               </Button>
               <Button onClick={createProject} disabled={loading || !name.trim()}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    {editingId ? "Updating..." : "Creating..."}
                   </>
                 ) : (
-                  "Create Project"
+                  editingId ? "Update Project" : "Create Project"
                 )}
               </Button>
             </div>
@@ -277,6 +303,14 @@ export function ProjectManager() {
                     {project.rules.length} rule{project.rules.length !== 1 ? "s" : ""}
                   </p>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => startEdit(project)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"

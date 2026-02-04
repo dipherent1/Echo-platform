@@ -7,32 +7,32 @@ import type { Page, Project, ActivityLog } from "@/lib/types"
 // Mock websites data - realistic browsing patterns
 const mockSites = [
   // Development
-  { domain: "github.com", paths: ["/pulls", "/issues", "/notifications", "/explore", "/settings"], titles: ["Pull Requests", "Issues", "Notifications", "Explore GitHub", "Settings"], category: "development" },
-  { domain: "stackoverflow.com", paths: ["/questions", "/questions/tagged/react", "/questions/tagged/typescript", "/questions/tagged/nextjs"], titles: ["Stack Overflow", "React Questions", "TypeScript Questions", "Next.js Questions"], category: "development" },
-  { domain: "vercel.com", paths: ["/dashboard", "/docs", "/blog", "/analytics"], titles: ["Vercel Dashboard", "Vercel Documentation", "Vercel Blog", "Analytics"], category: "development" },
-  { domain: "nextjs.org", paths: ["/docs", "/docs/app/building-your-application", "/docs/api-reference", "/blog"], titles: ["Next.js Docs", "Building Your Application", "API Reference", "Next.js Blog"], category: "development" },
-  { domain: "tailwindcss.com", paths: ["/docs", "/docs/installation", "/docs/utility-first", "/blog"], titles: ["Tailwind CSS", "Installation", "Utility-First Fundamentals", "Tailwind Blog"], category: "development" },
-  { domain: "localhost:3000", paths: ["/", "/dashboard", "/settings", "/api-docs"], titles: ["Local Dev", "Dashboard", "Settings", "API Documentation"], category: "development" },
+  { domain: "github.com", paths: ["/pulls", "/issues", "/notifications", "/explore", "/settings"], titles: ["Pull Requests", "Issues", "Notifications", "Explore GitHub", "Settings"], type: "development" },
+  { domain: "stackoverflow.com", paths: ["/questions", "/questions/tagged/react", "/questions/tagged/typescript", "/questions/tagged/nextjs"], titles: ["Stack Overflow", "React Questions", "TypeScript Questions", "Next.js Questions"], type: "development" },
+  { domain: "vercel.com", paths: ["/dashboard", "/docs", "/blog", "/analytics"], titles: ["Vercel Dashboard", "Vercel Documentation", "Vercel Blog", "Analytics"], type: "development" },
+  { domain: "nextjs.org", paths: ["/docs", "/docs/app/building-your-application", "/docs/api-reference", "/blog"], titles: ["Next.js Docs", "Building Your Application", "API Reference", "Next.js Blog"], type: "development" },
+  { domain: "tailwindcss.com", paths: ["/docs", "/docs/installation", "/docs/utility-first", "/blog"], titles: ["Tailwind CSS", "Installation", "Utility-First Fundamentals", "Tailwind Blog"], type: "development" },
+  { domain: "localhost:3000", paths: ["/", "/dashboard", "/settings", "/api-docs"], titles: ["Local Dev", "Dashboard", "Settings", "API Documentation"], type: "development" },
   
   // Communication
-  { domain: "mail.google.com", paths: ["/mail/u/0/#inbox", "/mail/u/0/#starred", "/mail/u/0/#sent"], titles: ["Inbox - Gmail", "Starred - Gmail", "Sent - Gmail"], category: "communication" },
-  { domain: "slack.com", paths: ["/client", "/messages", "/threads"], titles: ["Slack", "Messages", "Threads"], category: "communication" },
-  { domain: "discord.com", paths: ["/channels/@me", "/channels/server"], titles: ["Discord", "Server Chat"], category: "communication" },
+  { domain: "mail.google.com", paths: ["/mail/u/0/#inbox", "/mail/u/0/#starred", "/mail/u/0/#sent"], titles: ["Inbox - Gmail", "Starred - Gmail", "Sent - Gmail"], type: "communication" },
+  { domain: "slack.com", paths: ["/client", "/messages", "/threads"], titles: ["Slack", "Messages", "Threads"], type: "communication" },
+  { domain: "discord.com", paths: ["/channels/@me", "/channels/server"], titles: ["Discord", "Server Chat"], type: "communication" },
   
   // Productivity
-  { domain: "notion.so", paths: ["/", "/workspace", "/notes", "/tasks"], titles: ["Notion", "Workspace", "Notes", "Tasks"], category: "productivity" },
-  { domain: "linear.app", paths: ["/team/issues", "/team/projects", "/team/cycles"], titles: ["Linear Issues", "Projects", "Cycles"], category: "productivity" },
-  { domain: "figma.com", paths: ["/files", "/design/project", "/prototype"], titles: ["Figma Files", "Design Project", "Prototype"], category: "productivity" },
+  { domain: "notion.so", paths: ["/", "/workspace", "/notes", "/tasks"], titles: ["Notion", "Workspace", "Notes", "Tasks"], type: "productivity" },
+  { domain: "linear.app", paths: ["/team/issues", "/team/projects", "/team/cycles"], titles: ["Linear Issues", "Projects", "Cycles"], type: "productivity" },
+  { domain: "figma.com", paths: ["/files", "/design/project", "/prototype"], titles: ["Figma Files", "Design Project", "Prototype"], type: "productivity" },
   
   // Learning
-  { domain: "youtube.com", paths: ["/watch?v=abc123", "/playlist", "/@channel"], titles: ["TypeScript Tutorial", "React Playlist", "Dev Channel"], category: "learning" },
-  { domain: "udemy.com", paths: ["/course/react-complete", "/course/nextjs-complete"], titles: ["Complete React Course", "Next.js Complete Guide"], category: "learning" },
-  { domain: "medium.com", paths: ["/@author/article", "/topic/programming"], titles: ["Tech Article", "Programming Topic"], category: "learning" },
+  { domain: "youtube.com", paths: ["/watch?v=abc123", "/playlist", "/@channel"], titles: ["TypeScript Tutorial", "React Playlist", "Dev Channel"], type: "learning" },
+  { domain: "udemy.com", paths: ["/course/react-complete", "/course/nextjs-complete"], titles: ["Complete React Course", "Next.js Complete Guide"], type: "learning" },
+  { domain: "medium.com", paths: ["/@author/article", "/topic/programming"], titles: ["Tech Article", "Programming Topic"], type: "learning" },
   
   // Social (distraction)
-  { domain: "twitter.com", paths: ["/home", "/notifications", "/explore"], titles: ["Twitter Home", "Notifications", "Explore"], category: "social" },
-  { domain: "reddit.com", paths: ["/r/programming", "/r/webdev", "/r/reactjs"], titles: ["r/programming", "r/webdev", "r/reactjs"], category: "social" },
-  { domain: "news.ycombinator.com", paths: ["/", "/newest", "/ask"], titles: ["Hacker News", "New", "Ask HN"], category: "social" },
+  { domain: "twitter.com", paths: ["/home", "/notifications", "/explore"], titles: ["Twitter Home", "Notifications", "Explore"], type: "social" },
+  { domain: "reddit.com", paths: ["/r/programming", "/r/webdev", "/r/reactjs"], titles: ["r/programming", "r/webdev", "r/reactjs"], type: "social" },
+  { domain: "news.ycombinator.com", paths: ["/", "/newest", "/ask"], titles: ["Hacker News", "New", "Ask HN"], type: "social" },
 ]
 
 // Project definitions
@@ -79,11 +79,11 @@ function getWeightedSite(hour: number): typeof mockSites[0] {
   const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0)
   let random = Math.random() * totalWeight
   
-  for (const category of Object.keys(weights)) {
-    random -= weights[category]
+  for (const type of Object.keys(weights)) {
+    random -= weights[type]
     if (random <= 0) {
-      const categorySites = mockSites.filter(s => s.category === category)
-      return getRandomElement(categorySites)
+      const typeSites = mockSites.filter(s => s.type === type)
+      return getRandomElement(typeSites)
     }
   }
   
@@ -174,7 +174,7 @@ async function seedForUser(userId: ObjectId) {
           firstSeenAt: firstSeen,
           lastSeenAt: timestamp,
           ai: {
-            productivityLabel: site.category === "social" ? "distraction" : site.category === "development" ? "productive" : "neutral",
+            productivityLabel: site.type === "social" ? "distraction" : site.type === "development" ? "productive" : "neutral",
             confidence: Math.random() * 0.3 + 0.7,
             embedding: null,
           },

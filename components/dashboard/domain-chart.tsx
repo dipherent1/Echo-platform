@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
 
 interface DomainData {
   domain: string
@@ -14,7 +14,7 @@ interface DomainChartProps {
   data: DomainData[]
 }
 
-// Computed colors for chart bars
+// Computed colors for chart
 const CHART_COLORS = [
   "#4ade80", // green
   "#818cf8", // indigo  
@@ -58,6 +58,8 @@ export function DomainChart({ data }: DomainChartProps) {
     {} as Record<string, { label: string; color: string }>
   )
 
+  const total = chartData.reduce((sum, item) => sum + item.totalDuration, 0)
+
   return (
     <Card className="bg-card border-border">
       <CardHeader>
@@ -66,21 +68,8 @@ export function DomainChart({ data }: DomainChartProps) {
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 16 }}>
-              <XAxis type="number" hide />
-              <YAxis
-                dataKey="domain"
-                type="category"
-                width={120}
-                tickLine={false}
-                axisLine={false}
-                tick={{ fill: "#9ca3af", fontSize: 12 }}
-                tickFormatter={(value) =>
-                  value.length > 16 ? `${value.slice(0, 16)}...` : value
-                }
-              />
+            <PieChart>
               <ChartTooltip
-                cursor={{ fill: "rgba(255,255,255,0.05)" }}
                 content={
                   <ChartTooltipContent
                     formatter={(value, name) => (
@@ -94,21 +83,38 @@ export function DomainChart({ data }: DomainChartProps) {
                   />
                 }
               />
-              <Bar
+              <Pie
+                data={chartData}
                 dataKey="totalDuration"
-                radius={[0, 4, 4, 0]}
+                nameKey="domain"
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={100}
+                paddingAngle={2}
               >
                 {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                  <Cell key={`cell-${index}`} fill={entry.fill} stroke="transparent" />
                 ))}
-              </Bar>
-            </BarChart>
+              </Pie>
+            </PieChart>
           </ResponsiveContainer>
         </ChartContainer>
+        <div className="mt-4 flex flex-wrap gap-3">
+          {chartData.map((item) => (
+            <div key={item.domain} className="flex items-center gap-2">
+              <div
+                className="h-3 w-3 rounded-sm"
+                style={{ backgroundColor: item.fill }}
+              />
+              <span className="text-sm text-muted-foreground">{item.domain}</span>
+              <span className="text-sm text-foreground font-mono">
+                {Math.round((item.totalDuration / total) * 100)}%
+              </span>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   )
 }
-
-// Add Cell import
-import { Cell } from "recharts"

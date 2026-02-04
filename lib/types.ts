@@ -28,7 +28,7 @@ export interface Page {
 }
 
 export interface ProjectRule {
-  type: "domain" | "url_contains"
+  type: "domain" | "url_contains" | "manual_url"
   value: string
 }
 

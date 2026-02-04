@@ -9,39 +9,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Activity, Settings, LogOut, User, Copy, RefreshCw, Database } from "lucide-react"
+import { Activity, Settings, LogOut, User, Copy, RefreshCw } from "lucide-react"
 import { useState } from "react"
-import { useSWRConfig } from "swr"
 
 export function DashboardHeader() {
   const { user, token, logout, regenerateToken } = useAuth()
-  const { mutate } = useSWRConfig()
   const [copied, setCopied] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
-  const [seeding, setSeeding] = useState(false)
-
-  const seedData = async () => {
-    if (!token) return
-    setSeeding(true)
-    try {
-      const res = await fetch("/api/seed", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      if (res.ok) {
-        // Refresh all stats data
-        mutate(() => true)
-      } else {
-        console.error("Seed failed")
-      }
-    } catch (error) {
-      console.error("Seed error:", error)
-    } finally {
-      setSeeding(false)
-    }
-  }
 
   const copyToken = async () => {
     if (token) {
@@ -96,10 +70,6 @@ export function DashboardHeader() {
                 Regenerate Token
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={seedData} disabled={seeding}>
-                <Database className={`mr-2 h-4 w-4 ${seeding ? "animate-pulse" : ""}`} />
-                {seeding ? "Seeding..." : "Seed Mock Data"}
-              </DropdownMenuItem>
               <DropdownMenuItem>
                 <Settings className="mr-2 h-4 w-4" />
                 Settings

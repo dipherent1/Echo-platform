@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
 import { getDb } from "@/lib/db"
-import { authenticateRequest } from "@/lib/auth"
 import { logger } from "@/lib/logger"
-import { getUserFromSession } from "@/lib/session" // Import getUserFromSession
 import type { Page, Project, ActivityLog } from "@/lib/types"
 
 // Mock websites data - realistic browsing patterns
@@ -56,28 +54,21 @@ function getRandomInt(min: number, max: number): number {
 
 // Generate weighted random site based on time of day
 function getWeightedSite(hour: number): typeof mockSites[0] {
-  // Work hours (9-18): more dev, productivity
-  // Evening (18-23): more social, learning
-  // Night (23-9): less activity overall
-  
   const weights: Record<string, number> = {}
   
   if (hour >= 9 && hour < 18) {
-    // Work hours
     weights.development = 40
     weights.productivity = 25
     weights.communication = 20
     weights.learning = 10
     weights.social = 5
   } else if (hour >= 18 && hour < 23) {
-    // Evening
     weights.development = 20
     weights.learning = 30
     weights.social = 30
     weights.productivity = 10
     weights.communication = 10
   } else {
-    // Night/early morning
     weights.social = 40
     weights.learning = 30
     weights.development = 20
@@ -99,169 +90,178 @@ function getWeightedSite(hour: number): typeof mockSites[0] {
   return getRandomElement(mockSites)
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const authHeader = request.headers.get("authorization")
-    const user = await authenticateRequest(authHeader)
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+async function seedForUser(userId: ObjectId) {
+  const db = await getDb()
 
-    const db = await getDb()
-    const userId = user._id
+  // Clear existing data for this user
+  await db.collection("pages").deleteMany({ userId })
+  await db.collection("projects").deleteMany({ userId })
+  await db.collection("activity_logs").deleteMany({ "metadata.userId": userId })
 
-    // Clear existing data for this user
-    await db.collection("pages").deleteMany({ userId })
-    await db.collection("projects").deleteMany({ userId })
-    await db.collection("activity_logs").deleteMany({ "metadata.userId": userId })
+  logger.info("Cleared existing data for seed", { userId: userId.toString() })
 
-    logger.info("Cleared existing data for seed", { userId: userId.toString() })
+  // Create projects
+  const projectMap = new Map<string, ObjectId>()
+  const projectDocs: Project[] = []
+  
+  for (const proj of projectDefinitions) {
+    const projectId = new ObjectId()
+    projectMap.set(proj.name, projectId)
+    projectDocs.push({
+      _id: projectId,
+      userId,
+      name: proj.name,
+      color: proj.color,
+      rules: proj.rules,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+  }
+  
+  await db.collection<Project>("projects").insertMany(projectDocs)
+  logger.info("Created projects", { count: projectDocs.length })
 
-    // Create projects
-    const projectMap = new Map<string, ObjectId>()
-    const projectDocs: Project[] = []
+  // Create pages and activity logs
+  const pageMap = new Map<string, ObjectId>()
+  const pageDocs: Page[] = []
+  const activityDocs: ActivityLog[] = []
+
+  const now = new Date()
+  const daysToGenerate = 14
+
+  for (let dayOffset = 0; dayOffset < daysToGenerate; dayOffset++) {
+    const date = new Date(now)
+    date.setDate(date.getDate() - dayOffset)
     
-    for (const proj of projectDefinitions) {
-      const projectId = new ObjectId()
-      projectMap.set(proj.name, projectId)
-      projectDocs.push({
-        _id: projectId,
-        userId,
-        name: proj.name,
-        color: proj.color,
-        rules: proj.rules,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-    }
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6
+    const sessionsPerDay = isWeekend ? getRandomInt(10, 30) : getRandomInt(30, 60)
     
-    await db.collection<Project>("projects").insertMany(projectDocs)
-    logger.info("Created projects", { count: projectDocs.length })
-
-    // Create pages and activity logs
-    const pageMap = new Map<string, ObjectId>()
-    const pageDocs: Page[] = []
-    const activityDocs: ActivityLog[] = []
-
-    // Generate data for last 14 days
-    const now = new Date()
-    const daysToGenerate = 14
-
-    for (let dayOffset = 0; dayOffset < daysToGenerate; dayOffset++) {
-      const date = new Date(now)
-      date.setDate(date.getDate() - dayOffset)
+    for (let session = 0; session < sessionsPerDay; session++) {
+      let hour: number
+      const rand = Math.random()
+      if (rand < 0.1) {
+        hour = getRandomInt(0, 8)
+      } else if (rand < 0.8) {
+        hour = getRandomInt(9, 18)
+      } else {
+        hour = getRandomInt(19, 23)
+      }
       
-      // Generate 20-60 activity sessions per day (less on weekends)
-      const isWeekend = date.getDay() === 0 || date.getDay() === 6
-      const sessionsPerDay = isWeekend ? getRandomInt(10, 30) : getRandomInt(30, 60)
+      const minute = getRandomInt(0, 59)
+      const timestamp = new Date(date)
+      timestamp.setHours(hour, minute, getRandomInt(0, 59), 0)
       
-      for (let session = 0; session < sessionsPerDay; session++) {
-        // Random hour with realistic distribution (more activity 9am-11pm)
-        let hour: number
-        const rand = Math.random()
-        if (rand < 0.1) {
-          hour = getRandomInt(0, 8) // 10% early morning
-        } else if (rand < 0.8) {
-          hour = getRandomInt(9, 18) // 70% work hours
-        } else {
-          hour = getRandomInt(19, 23) // 20% evening
-        }
+      const site = getWeightedSite(hour)
+      const pathIndex = getRandomInt(0, site.paths.length - 1)
+      const url = `https://${site.domain}${site.paths[pathIndex]}`
+      const title = site.titles[pathIndex]
+      
+      let pageId = pageMap.get(url)
+      if (!pageId) {
+        pageId = new ObjectId()
+        pageMap.set(url, pageId)
         
-        const minute = getRandomInt(0, 59)
-        const timestamp = new Date(date)
-        timestamp.setHours(hour, minute, getRandomInt(0, 59), 0)
+        const firstSeen = new Date(now)
+        firstSeen.setDate(firstSeen.getDate() - getRandomInt(dayOffset, daysToGenerate))
         
-        // Get weighted site based on time
-        const site = getWeightedSite(hour)
-        const pathIndex = getRandomInt(0, site.paths.length - 1)
-        const url = `https://${site.domain}${site.paths[pathIndex]}`
-        const title = site.titles[pathIndex]
-        
-        // Get or create page
-        let pageId = pageMap.get(url)
-        if (!pageId) {
-          pageId = new ObjectId()
-          pageMap.set(url, pageId)
-          
-          const firstSeen = new Date(now)
-          firstSeen.setDate(firstSeen.getDate() - getRandomInt(dayOffset, daysToGenerate))
-          
-          pageDocs.push({
-            _id: pageId,
-            userId,
-            url,
-            domain: site.domain,
-            title,
-            description: null,
-            firstSeenAt: firstSeen,
-            lastSeenAt: timestamp,
-            ai: {
-              productivityLabel: site.category === "social" ? "distraction" : site.category === "development" ? "productive" : "neutral",
-              confidence: Math.random() * 0.3 + 0.7, // 0.7-1.0
-              embedding: null,
-            },
-          })
-        }
-        
-        // Match project
-        let projectId: ObjectId | null = null
-        for (const [projName, projId] of projectMap) {
-          const proj = projectDefinitions.find(p => p.name === projName)
-          if (proj) {
-            const matches = proj.rules.some(rule => {
-              if (rule.type === "domain") return site.domain === rule.value
-              if (rule.type === "url_contains") return url.includes(rule.value)
-              return false
-            })
-            if (matches) {
-              projectId = projId
-              break
-            }
-          }
-        }
-        
-        // Create activity log with realistic duration (30s - 30min)
-        const duration = getRandomInt(30, 1800)
-        
-        activityDocs.push({
-          _id: new ObjectId(),
-          timestamp,
-          duration,
-          pageId,
-          metadata: {
-            userId,
-            domain: site.domain,
-            projectId,
-            source: {
-              type: "extension",
-              deviceName: getRandomElement(["MacBook Pro", "Windows Desktop", "Linux Laptop"]),
-              clientId: `client_${getRandomInt(1000, 9999)}`,
-            },
+        pageDocs.push({
+          _id: pageId,
+          userId,
+          url,
+          domain: site.domain,
+          title,
+          description: null,
+          firstSeenAt: firstSeen,
+          lastSeenAt: timestamp,
+          ai: {
+            productivityLabel: site.category === "social" ? "distraction" : site.category === "development" ? "productive" : "neutral",
+            confidence: Math.random() * 0.3 + 0.7,
+            embedding: null,
           },
         })
       }
+      
+      let projectId: ObjectId | null = null
+      for (const [projName, projId] of projectMap) {
+        const proj = projectDefinitions.find(p => p.name === projName)
+        if (proj) {
+          const matches = proj.rules.some(rule => {
+            if (rule.type === "domain") return site.domain === rule.value
+            if (rule.type === "url_contains") return url.includes(rule.value)
+            return false
+          })
+          if (matches) {
+            projectId = projId
+            break
+          }
+        }
+      }
+      
+      const duration = getRandomInt(30, 1800)
+      
+      activityDocs.push({
+        _id: new ObjectId(),
+        timestamp,
+        duration,
+        pageId,
+        metadata: {
+          userId,
+          domain: site.domain,
+          projectId,
+          source: {
+            type: "extension",
+            deviceName: getRandomElement(["MacBook Pro", "Windows Desktop", "Linux Laptop"]),
+            clientId: `client_${getRandomInt(1000, 9999)}`,
+          },
+        },
+      })
+    }
+  }
+
+  if (pageDocs.length > 0) {
+    await db.collection<Page>("pages").insertMany(pageDocs)
+    logger.info("Created pages", { count: pageDocs.length })
+  }
+
+  if (activityDocs.length > 0) {
+    await db.collection<ActivityLog>("activity_logs").insertMany(activityDocs)
+    logger.info("Created activity logs", { count: activityDocs.length })
+  }
+
+  return {
+    projects: projectDocs.length,
+    pages: pageDocs.length,
+    activityLogs: activityDocs.length,
+    daysGenerated: daysToGenerate,
+  }
+}
+
+// GET /api/seed?email=user@example.com - Seeds data for the given user email
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const email = searchParams.get("email")
+    
+    if (!email) {
+      return NextResponse.json({ 
+        error: "Missing email parameter", 
+        usage: "GET /api/seed?email=user@example.com" 
+      }, { status: 400 })
     }
 
-    // Insert pages
-    if (pageDocs.length > 0) {
-      await db.collection<Page>("pages").insertMany(pageDocs)
-      logger.info("Created pages", { count: pageDocs.length })
+    const db = await getDb()
+    const user = await db.collection("users").findOne({ email })
+    
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Insert activity logs
-    if (activityDocs.length > 0) {
-      await db.collection<ActivityLog>("activity_logs").insertMany(activityDocs)
-      logger.info("Created activity logs", { count: activityDocs.length })
-    }
+    const stats = await seedForUser(user._id)
 
     return NextResponse.json({
       success: true,
-      stats: {
-        projects: projectDocs.length,
-        pages: pageDocs.length,
-        activityLogs: activityDocs.length,
-        daysGenerated: daysToGenerate,
-      },
+      user: { email: user.email, username: user.username },
+      stats,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Seed failed"

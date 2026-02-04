@@ -117,7 +117,8 @@ function getRandomTimestamp(daysAgo: number): Date {
 }
 
 async function seedData() {
-  const db = await getDb()
+  try {
+    const db = await getDb()
     
     // Create a demo user
     const email = "demo@echo.dev"

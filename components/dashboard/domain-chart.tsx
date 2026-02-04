@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
+import { PieChart, Pie, Cell } from "recharts"
 
 interface DomainData {
   domain: string
@@ -67,38 +67,36 @@ export function DomainChart({ data }: DomainChartProps) {
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    formatter={(value, name) => (
-                      <div className="flex items-center gap-2">
-                        <span>{name}</span>
-                        <span className="font-mono">
-                          {chartData.find((d) => d.domain === name)?.totalDurationFormatted}
-                        </span>
-                      </div>
-                    )}
-                  />
-                }
-              />
-              <Pie
-                data={chartData}
-                dataKey="totalDuration"
-                nameKey="domain"
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} stroke="transparent" />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+          <PieChart width={533} height={300}>
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  formatter={(value, name) => (
+                    <div className="flex items-center gap-2">
+                      <span>{name}</span>
+                      <span className="font-mono">
+                        {chartData.find((d) => d.domain === name)?.totalDurationFormatted}
+                      </span>
+                    </div>
+                  )}
+                />
+              }
+            />
+            <Pie
+              data={chartData}
+              dataKey="totalDuration"
+              nameKey="domain"
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={100}
+              paddingAngle={2}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} stroke="transparent" />
+              ))}
+            </Pie>
+          </PieChart>
         </ChartContainer>
         <div className="mt-4 flex flex-wrap gap-3">
           {chartData.map((item) => (

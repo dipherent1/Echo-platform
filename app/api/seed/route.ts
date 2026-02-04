@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { authenticateRequest } from "@/lib/auth"
 import { createActivityLog } from "@/lib/services/activity-service"
 import { createProject } from "@/lib/services/project-service"
+import { createUser } from "@/lib/services/user-service"
 import { logger } from "@/lib/logger"
 
 const MOCK_ACTIVITIES = [
@@ -30,94 +31,104 @@ const MOCK_ACTIVITIES = [
   { url: "https://reddit.com/r/programming", title: "r/programming - Reddit", domain: "reddit.com" },
 ]
 
-export async function POST(request: NextRequest) {
-  try {
-    const authHeader = request.headers.get("authorization")
-    const user = await authenticateRequest(authHeader)
+async function seedUserData(userId: any) {
+  // Create projects
+  const projects = await Promise.all([
+    createProject(userId, {
+      name: "Echo Platform",
+      color: "#10b981",
+      rules: [
+        { type: "domain", value: "github.com", operator: "equals" },
+        { type: "url", value: "echo", operator: "contains" },
+      ],
+    }),
+    createProject(userId, {
+      name: "Learning",
+      color: "#3b82f6",
+      rules: [
+        { type: "domain", value: "youtube.com", operator: "equals" },
+        { type: "domain", value: "dev.to", operator: "equals" },
+        { type: "url", value: "tutorial", operator: "contains" },
+      ],
+    }),
+    createProject(userId, {
+      name: "Documentation",
+      color: "#8b5cf6",
+      rules: [
+        { type: "url", value: "docs", operator: "contains" },
+        { type: "domain", value: "react.dev", operator: "equals" },
+      ],
+    }),
+  ])
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+  // Generate activity logs for the past 7 days
+  const now = new Date()
+  const logsCreated = []
 
-    logger.info("Starting seed data generation", { userId: user._id.toString() })
-
-    // Create projects
-    const projects = await Promise.all([
-      createProject(user._id, {
-        name: "Echo Platform",
-        color: "#10b981",
-        rules: [
-          { type: "domain", value: "github.com", operator: "equals" },
-          { type: "url", value: "echo", operator: "contains" },
-        ],
-      }),
-      createProject(user._id, {
-        name: "Learning",
-        color: "#3b82f6",
-        rules: [
-          { type: "domain", value: "youtube.com", operator: "equals" },
-          { type: "domain", value: "dev.to", operator: "equals" },
-          { type: "url", value: "tutorial", operator: "contains" },
-        ],
-      }),
-      createProject(user._id, {
-        name: "Documentation",
-        color: "#8b5cf6",
-        rules: [
-          { type: "url", value: "docs", operator: "contains" },
-          { type: "domain", value: "react.dev", operator: "equals" },
-        ],
-      }),
-    ])
-
-    // Generate activity logs for the past 7 days
-    const now = new Date()
-    const logsCreated = []
-
-    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-      const currentDay = new Date(now)
-      currentDay.setDate(currentDay.getDate() - dayOffset)
+  for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+    const currentDay = new Date(now)
+    currentDay.setDate(currentDay.getDate() - dayOffset)
+    
+    // Generate 15-30 activities per day
+    const activitiesPerDay = 15 + Math.floor(Math.random() * 15)
+    
+    for (let i = 0; i < activitiesPerDay; i++) {
+      const activity = MOCK_ACTIVITIES[Math.floor(Math.random() * MOCK_ACTIVITIES.length)]
       
-      // Generate 15-30 activities per day
-      const activitiesPerDay = 15 + Math.floor(Math.random() * 15)
+      // Random hour between 9 AM and 11 PM
+      const hour = 9 + Math.floor(Math.random() * 14)
+      const minute = Math.floor(Math.random() * 60)
       
-      for (let i = 0; i < activitiesPerDay; i++) {
-        const activity = MOCK_ACTIVITIES[Math.floor(Math.random() * MOCK_ACTIVITIES.length)]
-        
-        // Random hour between 9 AM and 11 PM
-        const hour = 9 + Math.floor(Math.random() * 14)
-        const minute = Math.floor(Math.random() * 60)
-        
-        const timestamp = new Date(currentDay)
-        timestamp.setHours(hour, minute, 0, 0)
-        
-        // Duration between 30 seconds and 45 minutes
-        const duration = 30 + Math.floor(Math.random() * 2670)
-        
-        try {
-          const log = await createActivityLog(user._id, {
-            url: activity.url,
-            title: activity.title,
-            duration,
-            timestamp: timestamp.toISOString(),
-          })
-          logsCreated.push(log)
-        } catch (error) {
-          // Continue if duplicate
-          console.log(`[v0] Skipping duplicate: ${activity.url}`)
-        }
+      const timestamp = new Date(currentDay)
+      timestamp.setHours(hour, minute, 0, 0)
+      
+      // Duration between 30 seconds and 45 minutes
+      const duration = 30 + Math.floor(Math.random() * 2670)
+      
+      try {
+        const log = await createActivityLog(userId, {
+          url: activity.url,
+          title: activity.title,
+          duration,
+          timestamp: timestamp.toISOString(),
+        })
+        logsCreated.push(log)
+      } catch (error) {
+        // Continue if duplicate
+        console.log(`[v0] Skipping duplicate: ${activity.url}`)
       }
     }
+  }
 
-    logger.info("Seed data generation completed", {
-      userId: user._id.toString(),
-      projectsCreated: projects.length,
-      logsCreated: logsCreated.length,
-    })
+  return { projects, logsCreated }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { email, password } = body
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email and password required" },
+        { status: 400 }
+      )
+    }
+
+    // Create user with demo credentials
+    const user = await createUser(email, password)
+    logger.info("Demo user created", { userId: user._id.toString() })
+
+    // Seed data
+    const { projects, logsCreated } = await seedUserData(user._id)
 
     return NextResponse.json({
       success: true,
-      message: "Mock data created successfully",
+      message: "Demo account created and seeded with mock data",
+      credentials: {
+        email,
+        password,
+      },
       stats: {
         projects: projects.length,
         activityLogs: logsCreated.length,
@@ -142,73 +153,7 @@ export async function GET(request: NextRequest) {
 
     logger.info("Starting seed data generation", { userId: user._id.toString() })
 
-    // Create projects
-    const projects = await Promise.all([
-      createProject(user._id, {
-        name: "Echo Platform",
-        color: "#10b981",
-        rules: [
-          { type: "domain", value: "github.com", operator: "equals" },
-          { type: "url", value: "echo", operator: "contains" },
-        ],
-      }),
-      createProject(user._id, {
-        name: "Learning",
-        color: "#3b82f6",
-        rules: [
-          { type: "domain", value: "youtube.com", operator: "equals" },
-          { type: "domain", value: "dev.to", operator: "equals" },
-          { type: "url", value: "tutorial", operator: "contains" },
-        ],
-      }),
-      createProject(user._id, {
-        name: "Documentation",
-        color: "#8b5cf6",
-        rules: [
-          { type: "url", value: "docs", operator: "contains" },
-          { type: "domain", value: "react.dev", operator: "equals" },
-        ],
-      }),
-    ])
-
-    // Generate activity logs for the past 7 days
-    const now = new Date()
-    const logsCreated = []
-
-    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-      const currentDay = new Date(now)
-      currentDay.setDate(currentDay.getDate() - dayOffset)
-      
-      // Generate 15-30 activities per day
-      const activitiesPerDay = 15 + Math.floor(Math.random() * 15)
-      
-      for (let i = 0; i < activitiesPerDay; i++) {
-        const activity = MOCK_ACTIVITIES[Math.floor(Math.random() * MOCK_ACTIVITIES.length)]
-        
-        // Random hour between 9 AM and 11 PM
-        const hour = 9 + Math.floor(Math.random() * 14)
-        const minute = Math.floor(Math.random() * 60)
-        
-        const timestamp = new Date(currentDay)
-        timestamp.setHours(hour, minute, 0, 0)
-        
-        // Duration between 30 seconds and 45 minutes
-        const duration = 30 + Math.floor(Math.random() * 2670)
-        
-        try {
-          const log = await createActivityLog(user._id, {
-            url: activity.url,
-            title: activity.title,
-            duration,
-            timestamp: timestamp.toISOString(),
-          })
-          logsCreated.push(log)
-        } catch (error) {
-          // Continue if duplicate
-          console.log(`[v0] Skipping duplicate: ${activity.url}`)
-        }
-      }
-    }
+    const { projects, logsCreated } = await seedUserData(user._id)
 
     logger.info("Seed data generation completed", {
       userId: user._id.toString(),

@@ -46,22 +46,25 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
             <span className="font-semibold text-sidebar-foreground">Echo</span>
           </div>
         )}
-        {collapsed && <Activity className="h-6 w-6 text-sidebar-primary mx-auto" />}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn(
-            "h-8 w-8 p-0 text-sidebar-foreground hover:bg-sidebar-accent",
-            collapsed && "absolute right-2"
-          )}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
+        {collapsed && (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="mx-auto text-sidebar-foreground hover:text-sidebar-primary transition-colors"
+            title="Expand sidebar"
+          >
+            <Activity className="h-6 w-6" />
+          </button>
+        )}
+        {!collapsed && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCollapsed(!collapsed)}
+            className="h-8 w-8 p-0 text-sidebar-foreground hover:bg-sidebar-accent"
+          >
             <ChevronLeft className="h-4 w-4" />
-          )}
-        </Button>
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}

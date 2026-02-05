@@ -3,6 +3,7 @@
 import { AuthProvider, useAuth } from "@/lib/auth-context"
 import { AuthForm } from "@/components/auth/auth-form"
 import { DashboardContent } from "@/components/dashboard/dashboard-content"
+import ChatWidget from "@/components/AI/ChatWidget"
 import { Loader2 } from "lucide-react"
 
 function AppContent() {
@@ -20,7 +21,12 @@ function AppContent() {
     return <AuthForm />
   }
 
-  return <DashboardContent />
+  return (
+    <>
+      <DashboardContent />
+      <ChatWidget />
+    </>
+  );
 }
 
 export default function Home() {

@@ -1,6 +1,6 @@
 # Personal Productivity Tracker
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+_Automatically synced with your [v0.app](https://v0.app) deployments_
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/dipherent1s-projects/v0-personal-productivity-tracker-kd)
 [![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/dvURwdPHG36)
@@ -28,3 +28,11 @@ Continue building your app on:
 2. Deploy your chats from the v0 interface
 3. Changes are automatically pushed to this repository
 4. Vercel deploys the latest version from this repository
+
+# Todo
+
+- [ ] add ai feature
+- [ ] the pie chart should only show top 7 plus others
+- [ ] stop token regeneration when user login
+- [ ] add filter to site pages
+- [ ] remove monthly features

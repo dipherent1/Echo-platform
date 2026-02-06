@@ -41,6 +41,12 @@ export default function ChatWidget() {
     }
   }, [messages]);
 
+  const presetQuestions = [
+    "Was I productive today?",
+    "How was my day?",
+    "How was my week?",
+  ];
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -165,24 +171,43 @@ export default function ChatWidget() {
             <div ref={messagesEndRef} />
           </CardContent>
 
-          <CardFooter className="p-4 border-t bg-card">
+          <CardFooter className="flex-col gap-3 p-4 border-t bg-card/50 backdrop-blur-sm">
+            {messages.length < 2 && (
+              <div className="w-full">
+                <p className="text-xs font-medium text-muted-foreground mb-2 px-1">
+                  Suggestions
+                </p>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none mask-fade-right">
+                  {presetQuestions.map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => setInput(q)}
+                      className="shrink-0 rounded-full border border-border/50 bg-background/50 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground active:scale-95 text-left"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <form
               onSubmit={handleSend}
               className="flex w-full gap-2 items-center"
             >
               <Input
-                className="flex-1 rounded-full bg-background"
+                className="flex-1 rounded-full bg-background border-border/80 focus-visible:ring-offset-0 px-4 h-10 shadow-sm"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask something..."
+                placeholder="Ask AI..."
+                autoFocus
               />
               <Button
                 type="submit"
                 size="icon"
-                className="rounded-full shrink-0"
+                className="h-10 w-10 rounded-full shrink-0 shadow-sm"
                 disabled={!input.trim()}
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-4 w-4 ml-0.5" />
                 <span className="sr-only">Send</span>
               </Button>
             </form>

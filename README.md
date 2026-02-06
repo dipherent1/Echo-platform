@@ -37,3 +37,6 @@ Continue building your app on:
 - [ ] stop token regeneration when user login
 - [ ] add filter to site pages
 - [ ] remove monthly features
+- [ ] deal with token limit
+- [ ] fix the heat map content 
+- [ ] fix sidebar

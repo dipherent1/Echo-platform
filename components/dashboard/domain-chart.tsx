@@ -1,23 +1,27 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { PieChart, Pie, Cell } from "recharts"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { PieChart, Pie, Cell } from "recharts";
 
 interface DomainData {
-  domain: string
-  totalDuration: number
-  totalDurationFormatted: string
+  domain: string;
+  totalDuration: number;
+  totalDurationFormatted: string;
 }
 
 interface DomainChartProps {
-  data: DomainData[]
+  data: DomainData[];
 }
 
 // Computed colors for chart
 const CHART_COLORS = [
   "#4ade80", // green
-  "#818cf8", // indigo  
+  "#818cf8", // indigo
   "#f59e0b", // amber
   "#ec4899", // pink
   "#38bdf8", // sky
@@ -26,16 +30,16 @@ const CHART_COLORS = [
   "#22d3d8", // cyan
   "#f472b6", // pink
   "#84cc16", // lime
-]
+];
 
 function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
   if (hours > 0) {
-    return `${hours}h ${minutes}m`
+    return `${hours}h ${minutes}m`;
   }
-  return `${minutes}m`
+  return `${minutes}m`;
 }
 
 export function DomainChart({ data }: DomainChartProps) {
@@ -49,33 +53,38 @@ export function DomainChart({ data }: DomainChartProps) {
           <p className="text-muted-foreground">No domain data available</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   // Process data to show top 10 + Others
-  const sortedData = [...data].sort((a, b) => b.totalDuration - a.totalDuration)
-  const LIMIT = 10
-  let displayData = sortedData
-  
+  const sortedData = [...data].sort(
+    (a, b) => b.totalDuration - a.totalDuration,
+  );
+  const LIMIT = 10;
+  let displayData = sortedData;
+
   if (sortedData.length > LIMIT) {
-    const top = sortedData.slice(0, LIMIT)
-    const others = sortedData.slice(LIMIT)
-    const othersDuration = others.reduce((sum, item) => sum + item.totalDuration, 0)
-    
+    const top = sortedData.slice(0, LIMIT);
+    const others = sortedData.slice(LIMIT);
+    const othersDuration = others.reduce(
+      (sum, item) => sum + item.totalDuration,
+      0,
+    );
+
     displayData = [
       ...top,
       {
         domain: "Others",
         totalDuration: othersDuration,
-        totalDurationFormatted: formatDuration(othersDuration)
-      }
-    ]
+        totalDurationFormatted: formatDuration(othersDuration),
+      },
+    ];
   }
 
   const chartData = displayData.map((item, index) => ({
     ...item,
     fill: CHART_COLORS[index % CHART_COLORS.length],
-  }))
+  }));
 
   const chartConfig = chartData.reduce(
     (acc, item) => ({
@@ -85,10 +94,10 @@ export function DomainChart({ data }: DomainChartProps) {
         color: item.fill,
       },
     }),
-    {} as Record<string, { label: string; color: string }>
-  )
+    {} as Record<string, { label: string; color: string }>,
+  );
 
-  const total = chartData.reduce((sum, item) => sum + item.totalDuration, 0)
+  const total = chartData.reduce((sum, item) => sum + item.totalDuration, 0);
 
   return (
     <Card className="bg-card border-border">
@@ -105,7 +114,10 @@ export function DomainChart({ data }: DomainChartProps) {
                     <div className="flex items-center gap-2">
                       <span>{name}</span>
                       <span className="font-mono">
-                        {chartData.find((d) => d.domain === name)?.totalDurationFormatted}
+                        {
+                          chartData.find((d) => d.domain === name)
+                            ?.totalDurationFormatted
+                        }
                       </span>
                     </div>
                   )}
@@ -123,7 +135,11 @@ export function DomainChart({ data }: DomainChartProps) {
               paddingAngle={2}
             >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.fill} stroke="transparent" />
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.fill}
+                  stroke="transparent"
+                />
               ))}
             </Pie>
           </PieChart>
@@ -135,7 +151,9 @@ export function DomainChart({ data }: DomainChartProps) {
                 className="h-3 w-3 rounded-sm"
                 style={{ backgroundColor: item.fill }}
               />
-              <span className="text-sm text-muted-foreground">{item.domain}</span>
+              <span className="text-sm text-muted-foreground">
+                {item.domain}
+              </span>
               <span className="text-sm text-foreground font-mono">
                 {Math.round((item.totalDuration / total) * 100)}%
               </span>
@@ -144,5 +162,5 @@ export function DomainChart({ data }: DomainChartProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

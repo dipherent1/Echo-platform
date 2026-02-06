@@ -32,11 +32,12 @@ Continue building your app on:
 # Todo
 
 - [x] add ai feature
-- [ ] enhance ai feature
+- [x] enhance ai feature
 - [ ] the pie chart should only show top 7 plus others
 - [ ] stop token regeneration when user login
 - [ ] add filter to site pages
 - [ ] remove monthly features
 - [ ] deal with token limit
-- [ ] fix the heat map content 
+- [ ] fix the heat map content to only show the pages 
 - [ ] fix sidebar
+- [ ] clean up the extention  

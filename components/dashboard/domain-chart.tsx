@@ -28,6 +28,16 @@ const CHART_COLORS = [
   "#84cc16", // lime
 ]
 
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`
+  }
+  return `${minutes}m`
+}
+
 export function DomainChart({ data }: DomainChartProps) {
   if (!data || data.length === 0) {
     return (
@@ -42,7 +52,27 @@ export function DomainChart({ data }: DomainChartProps) {
     )
   }
 
-  const chartData = data.map((item, index) => ({
+  // Process data to show top 10 + Others
+  const sortedData = [...data].sort((a, b) => b.totalDuration - a.totalDuration)
+  const LIMIT = 10
+  let displayData = sortedData
+  
+  if (sortedData.length > LIMIT) {
+    const top = sortedData.slice(0, LIMIT)
+    const others = sortedData.slice(LIMIT)
+    const othersDuration = others.reduce((sum, item) => sum + item.totalDuration, 0)
+    
+    displayData = [
+      ...top,
+      {
+        domain: "Others",
+        totalDuration: othersDuration,
+        totalDurationFormatted: formatDuration(othersDuration)
+      }
+    ]
+  }
+
+  const chartData = displayData.map((item, index) => ({
     ...item,
     fill: CHART_COLORS[index % CHART_COLORS.length],
   }))

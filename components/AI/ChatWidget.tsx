@@ -1,9 +1,22 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react"; // <--- Using the package you found
+import { useChat } from "@ai-sdk/react";
 import { useState, useRef, useEffect } from "react";
 import { DefaultChatTransport } from "ai";
 import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import { X, MessageCircle, Send } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { cn } from "@/lib/utils";
 
 export default function ChatWidget() {
   const { token } = useAuth();
@@ -32,32 +45,30 @@ export default function ChatWidget() {
     e.preventDefault();
     if (!input.trim()) return;
 
-    // <--- Using your sendMessage logic
     await sendMessage({ text: input });
-
     setInput("");
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end pointer-events-none">
       {/* Chat Window */}
       {isOpen && (
-        <div className="mb-4 w-[350px] h-[500px] bg-white border border-gray-200 rounded-2xl shadow-xl flex flex-col overflow-hidden">
-          {/* Header */}
-          <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
-            <h3 className="font-semibold">AI Assistant</h3>
-            <button
+        <Card className="mb-4 w-[350px] h-[500px] flex flex-col shadow-xl pointer-events-auto border-border bg-card">
+          <CardHeader className="bg-primary text-primary-foreground p-4 flex flex-row items-center justify-between space-y-0 rounded-t-xl">
+            <CardTitle className="text-base">AI Assistant</CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setIsOpen(false)}
-              className="text-white hover:text-gray-200"
+              className="h-8 w-8 text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground"
             >
-              ✕
-            </button>
-          </div>
+              <X className="h-5 w-5" />
+            </Button>
+          </CardHeader>
 
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+          <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/50">
             {messages.length === 0 && (
-              <p className="text-gray-500 text-sm text-center mt-4">
+              <p className="text-muted-foreground text-sm text-center mt-4">
                 How can I help you today?
               </p>
             )}
@@ -68,109 +79,129 @@ export default function ChatWidget() {
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+                  className={cn(
+                    "max-w-[85%] rounded-2xl px-4 py-2 text-sm shadow-sm",
                     m.role === "user"
-                      ? "bg-blue-600 text-white rounded-br-none"
-                      : "bg-gray-200 text-gray-800 rounded-bl-none"
-                  }`}
+                      ? "bg-primary text-primary-foreground rounded-br-none"
+                      : "bg-muted text-foreground rounded-bl-none",
+                  )}
                 >
                   {m.parts ? (
                     m.parts.map((part, i) => {
                       switch (part.type) {
                         case "text":
-                          return <div key={`${m.id}-${i}`}>{part.text}</div>;
-                        case "tool-weather":
-                        case "tool-convertFahrenheitToCelsius":
                           return (
-                            <pre key={`${m.id}-${i}`}>
-                              {JSON.stringify(part, null, 2)}
-                            </pre>
+                            <div
+                              key={`${m.id}-${i}`}
+                              className="prose-sm dark:prose-invert break-words leading-normal"
+                            >
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  p: ({ children }) => (
+                                    <p className="mb-1 last:mb-0">{children}</p>
+                                  ),
+                                  ul: ({ children }) => (
+                                    <ul className="list-disc ml-4 mb-1 space-y-0.5">
+                                      {children}
+                                    </ul>
+                                  ),
+                                  ol: ({ children }) => (
+                                    <ol className="list-decimal ml-4 mb-1 space-y-0.5">
+                                      {children}
+                                    </ol>
+                                  ),
+                                  li: ({ children }) => <li>{children}</li>,
+                                  a: ({ children, href }) => (
+                                    <a
+                                      href={href}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="underline underline-offset-2 hover:opacity-80 font-medium"
+                                    >
+                                      {children}
+                                    </a>
+                                  ),
+                                  code: ({ children }) => (
+                                    <code className="bg-background/20 px-1 py-0.5 rounded font-mono text-xs">
+                                      {children}
+                                    </code>
+                                  ),
+                                  pre: ({ children }) => (
+                                    <pre className="bg-background/20 p-2 rounded mb-2 overflow-x-auto text-xs font-mono">
+                                      {children}
+                                    </pre>
+                                  ),
+                                }}
+                              >
+                                {part.text}
+                              </ReactMarkdown>
+                            </div>
                           );
+                        case "tool-invocation":
+                          const invocation =
+                            "toolInvocation" in part
+                              ? part.toolInvocation
+                              : part;
+                          return (
+                            <div
+                              key={`${m.id}-${i}`}
+                              className="text-xs bg-muted/50 p-2 rounded italic text-muted-foreground mb-1"
+                            >
+                              Calling tool:{" "}
+                              {JSON.stringify(invocation, null, 2)}
+                            </div>
+                          );
+                        default:
+                          return null;
                       }
-                      return null;
                     })
                   ) : (
-                    // Fallback for older messages if any
-                    <span>"No messages"</span>
+                    <span>No content</span>
                   )}
                 </div>
               </div>
             ))}
             <div ref={messagesEndRef} />
-          </div>
+          </CardContent>
 
-          {/* Input Area */}
-          <form
-            onSubmit={handleSend}
-            className="p-4 border-t bg-white flex gap-2"
-          >
-            <input
-              className="flex-1 border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-black"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask something..."
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          <CardFooter className="p-4 border-t bg-card">
+            <form
+              onSubmit={handleSend}
+              className="flex w-full gap-2 items-center"
             >
-              {/* Send Icon */}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-5 h-5"
+              <Input
+                className="flex-1 rounded-full bg-background"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask something..."
+              />
+              <Button
+                type="submit"
+                size="icon"
+                className="rounded-full shrink-0"
+                disabled={!input.trim()}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"
-                />
-              </svg>
-            </button>
-          </form>
-        </div>
+                <Send className="h-4 w-4" />
+                <span className="sr-only">Send</span>
+              </Button>
+            </form>
+          </CardFooter>
+        </Card>
       )}
 
       {/* Floating Toggle Button */}
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-transform hover:scale-105"
+        size="icon"
+        className="h-14 w-14 rounded-full shadow-lg hover:scale-105 transition-transform pointer-events-auto"
       >
         {isOpen ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-            />
-          </svg>
+          <X className="h-6 w-6" />
         ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"
-            />
-          </svg>
+          <MessageCircle className="h-6 w-6" />
         )}
-      </button>
+      </Button>
     </div>
   );
 }

@@ -2,10 +2,22 @@
 
 import { useChat } from "@ai-sdk/react"; // <--- Using the package you found
 import { useState, useRef, useEffect } from "react";
+import { DefaultChatTransport } from "ai";
+import { useAuth } from "@/lib/auth-context";
 
 export default function ChatWidget() {
+  const { token } = useAuth();
+
   const [input, setInput] = useState("");
-  const { messages, sendMessage } = useChat();
+  const { messages, sendMessage } = useChat({
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      headers: () => ({
+        Authorization: `Bearer ${token}`,
+      }),
+      credentials: () => "include",
+    }),
+  });
   const [isOpen, setIsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

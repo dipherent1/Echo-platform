@@ -31,7 +31,8 @@ Continue building your app on:
 
 # Todo
 
-- [ ] add ai feature
+- [x] add ai feature
+- [ ] enhance ai feature
 - [ ] the pie chart should only show top 7 plus others
 - [ ] stop token regeneration when user login
 - [ ] add filter to site pages

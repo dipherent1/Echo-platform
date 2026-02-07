@@ -178,8 +178,12 @@ export function TokenView() {
         </CardHeader>
         <CardContent className="space-y-4">
           <ol className="list-decimal list-inside space-y-2 text-sm text-foreground">
-            <li>Install the Echo Chrome extension</li>
-            <li>Click the extension icon and go to Settings</li>
+            <li>Clone Echo-chrome-extention Repository</li>
+            <li>Go to chrome://extensions/</li>
+            <li>Turn on developer mode</li>
+            <li>Click on load unpacked</li>
+            <li>Select the folder where you cloned the repository</li>
+            <li>Click the Echo extension icon in the toolbar</li>
             <li>Paste your API token in the token field</li>
             <li>
               The extension will automatically track your browsing activity
@@ -187,10 +191,11 @@ export function TokenView() {
           </ol>
 
           <div className="p-3 rounded-lg bg-secondary">
-            <p className="text-xs text-muted-foreground mb-2">API Endpoint:</p>
+            <p className="text-xs text-muted-foreground mb-2">
+              Extention Repository:
+            </p>
             <code className="text-sm text-foreground font-mono">
-              POST {typeof window !== "undefined" ? window.location.origin : ""}
-              /api/log
+              https://github.com/dipherent1/Echo-chrome-extention
             </code>
           </div>
         </CardContent>

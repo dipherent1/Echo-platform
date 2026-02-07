@@ -33,8 +33,9 @@ Continue building your app on:
 
 - [x] add ai feature
 - [x] enhance ai feature
-- [ ] the pie chart should only show top 7 plus others
+- [x] the pie chart should only show top 9 plus others
 - [ ] stop token regeneration when user login
+- [ ] update instruction for loading extentions 
 - [ ] add filter to site pages
 - [ ] remove monthly features
 - [ ] deal with token limit

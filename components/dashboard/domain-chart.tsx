@@ -56,11 +56,11 @@ export function DomainChart({ data }: DomainChartProps) {
     );
   }
 
-  // Process data to show top 10 + Others
+  // Process data to show top 9 + Others
   const sortedData = [...data].sort(
     (a, b) => b.totalDuration - a.totalDuration,
   );
-  const LIMIT = 10;
+  const LIMIT = 9;
   let displayData = sortedData;
 
   if (sortedData.length > LIMIT) {

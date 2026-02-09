@@ -39,8 +39,8 @@ Continue building your app on:
 - [x] add filter to site pages
 - [x] fix the heat map content to only show the pages and total time
 - [x] fix sidebar
-- [ ] remove monthly features
-- [ ] add project functionality
+- [x] remove monthly features
+- [x] add project functionality
 - [ ] deal with token limit
 - [ ] migrate to better auth
 - [ ] clean up the extention

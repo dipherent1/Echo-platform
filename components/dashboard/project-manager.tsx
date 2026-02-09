@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useAuth } from "@/lib/auth-context"
-import useSWR, { mutate } from "swr"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState } from "react";
+import { useAuth } from "@/lib/auth-context";
+import useSWR, { mutate } from "swr";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -13,29 +13,37 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Trash2, FolderOpen, Globe, Link, Loader2, Edit2 } from "lucide-react"
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Plus,
+  Trash2,
+  FolderOpen,
+  Globe,
+  Link,
+  Loader2,
+  Edit2,
+} from "lucide-react";
 
 interface ProjectRule {
-  type: "domain" | "url_contains"
-  value: string
+  type: "domain" | "url_contains";
+  value: string;
 }
 
 interface Project {
-  id: string
-  name: string
-  color: string
-  rules: ProjectRule[]
-  createdAt: string
-  updatedAt: string
+  id: string;
+  name: string;
+  color: string;
+  rules: ProjectRule[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 const COLORS = [
@@ -49,51 +57,53 @@ const COLORS = [
   "#22d3d8",
   "#f472b6",
   "#84cc16",
-]
+];
 
 export function ProjectManager() {
-  const { token } = useAuth()
-  const [isOpen, setIsOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [name, setName] = useState("")
-  const [color, setColor] = useState(COLORS[0])
-  const [rules, setRules] = useState<ProjectRule[]>([])
-  const [newRuleType, setNewRuleType] = useState<"domain" | "url_contains">("domain")
-  const [newRuleValue, setNewRuleValue] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [deleting, setDeleting] = useState<string | null>(null)
+  const { token } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [color, setColor] = useState(COLORS[0]);
+  const [rules, setRules] = useState<ProjectRule[]>([]);
+  const [newRuleType, setNewRuleType] = useState<"domain" | "url_contains">(
+    "domain",
+  );
+  const [newRuleValue, setNewRuleValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const fetcher = async (url: string) => {
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) throw new Error("Failed to fetch")
-    return res.json()
-  }
+    });
+    if (!res.ok) throw new Error("Failed to fetch");
+    return res.json();
+  };
 
   const { data, isLoading } = useSWR<{ projects: Project[] }>(
     token ? "/api/projects" : null,
-    fetcher
-  )
+    fetcher,
+  );
 
   const addRule = () => {
     if (newRuleValue.trim()) {
-      setRules([...rules, { type: newRuleType, value: newRuleValue.trim() }])
-      setNewRuleValue("")
+      setRules([...rules, { type: newRuleType, value: newRuleValue.trim() }]);
+      setNewRuleValue("");
     }
-  }
+  };
 
   const removeRule = (index: number) => {
-    setRules(rules.filter((_, i) => i !== index))
-  }
+    setRules(rules.filter((_, i) => i !== index));
+  };
 
   const createProject = async () => {
-    if (!name.trim()) return
+    if (!name.trim()) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const url = editingId ? `/api/projects/${editingId}` : "/api/projects"
-      const method = editingId ? "PATCH" : "POST"
+      const url = editingId ? `/api/projects/${editingId}` : "/api/projects";
+      const method = editingId ? "PATCH" : "POST";
 
       const res = await fetch(url, {
         method,
@@ -102,59 +112,65 @@ export function ProjectManager() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ name, color, rules }),
-      })
+      });
 
       if (res.ok) {
-        mutate("/api/projects")
-        setIsOpen(false)
-        setEditingId(null)
-        setName("")
-        setColor(COLORS[0])
-        setRules([])
+        mutate("/api/projects");
+        setIsOpen(false);
+        setEditingId(null);
+        setName("");
+        setColor(COLORS[0]);
+        setRules([]);
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const startEdit = (project: Project) => {
-    setEditingId(project.id)
-    setName(project.name)
-    setColor(project.color)
-    setRules(project.rules)
-    setIsOpen(true)
-  }
+    setEditingId(project.id);
+    setName(project.name);
+    setColor(project.color);
+    setRules(project.rules);
+    setIsOpen(true);
+  };
 
   const resetForm = () => {
-    setIsOpen(false)
-    setEditingId(null)
-    setName("")
-    setColor(COLORS[0])
-    setRules([])
-    setNewRuleValue("")
-  }
+    setIsOpen(false);
+    setEditingId(null);
+    setName("");
+    setColor(COLORS[0]);
+    setRules([]);
+    setNewRuleValue("");
+  };
 
   const deleteProject = async (id: string) => {
-    setDeleting(id)
+    setDeleting(id);
     try {
       const res = await fetch(`/api/projects/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
-      })
+      });
 
       if (res.ok) {
-        mutate("/api/projects")
+        mutate("/api/projects");
       }
     } finally {
-      setDeleting(null)
+      setDeleting(null);
     }
-  }
+  };
 
   return (
     <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-foreground">Projects</CardTitle>
-        <Dialog open={isOpen} onOpenChange={(open) => !open && resetForm()}>
+        <Dialog
+          open={isOpen}
+          onOpenChange={(open) => {
+            setIsOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1">
               <Plus className="h-4 w-4" />
@@ -193,7 +209,9 @@ export function ProjectManager() {
                       type="button"
                       onClick={() => setColor(c)}
                       className={`h-8 w-8 rounded-md transition-all ${
-                        color === c ? "ring-2 ring-foreground ring-offset-2 ring-offset-background" : ""
+                        color === c
+                          ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
+                          : ""
                       }`}
                       style={{ backgroundColor: c }}
                     />
@@ -222,7 +240,9 @@ export function ProjectManager() {
                         <span className="text-xs text-muted-foreground">
                           {rule.type === "domain" ? "Domain:" : "URL contains:"}
                         </span>
-                        <span className="text-sm text-foreground flex-1">{rule.value}</span>
+                        <span className="text-sm text-foreground flex-1">
+                          {rule.value}
+                        </span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -239,7 +259,9 @@ export function ProjectManager() {
                 <div className="flex gap-2 mt-2">
                   <Select
                     value={newRuleType}
-                    onValueChange={(v) => setNewRuleType(v as "domain" | "url_contains")}
+                    onValueChange={(v) =>
+                      setNewRuleType(v as "domain" | "url_contains")
+                    }
                   >
                     <SelectTrigger className="w-36 bg-secondary border-border text-foreground">
                       <SelectValue />
@@ -250,7 +272,9 @@ export function ProjectManager() {
                     </SelectContent>
                   </Select>
                   <Input
-                    placeholder={newRuleType === "domain" ? "github.com" : "/my-project/"}
+                    placeholder={
+                      newRuleType === "domain" ? "github.com" : "/my-project/"
+                    }
                     value={newRuleValue}
                     onChange={(e) => setNewRuleValue(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addRule()}
@@ -267,14 +291,19 @@ export function ProjectManager() {
               <Button variant="ghost" onClick={resetForm}>
                 Cancel
               </Button>
-              <Button onClick={createProject} disabled={loading || !name.trim()}>
+              <Button
+                onClick={createProject}
+                disabled={loading || !name.trim()}
+              >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {editingId ? "Updating..." : "Creating..."}
                   </>
+                ) : editingId ? (
+                  "Update Project"
                 ) : (
-                  editingId ? "Update Project" : "Create Project"
+                  "Create Project"
                 )}
               </Button>
             </div>
@@ -300,7 +329,8 @@ export function ProjectManager() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground">{project.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {project.rules.length} rule{project.rules.length !== 1 ? "s" : ""}
+                    {project.rules.length} rule
+                    {project.rules.length !== 1 ? "s" : ""}
                   </p>
                 </div>
                 <Button
@@ -338,5 +368,5 @@ export function ProjectManager() {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

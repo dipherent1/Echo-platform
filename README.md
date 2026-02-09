@@ -44,3 +44,5 @@ Continue building your app on:
 - [ ] deal with token limit
 - [ ] migrate to better auth
 - [ ] clean up the extention
+- [ ] enhance security for cronjob to delete data
+- [ ] enhance security for seeder

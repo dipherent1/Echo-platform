@@ -1,61 +1,65 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 
 interface TopUrl {
-  title: string
-  url: string
-  totalDuration: number
-  totalDurationFormatted: string
+  title: string;
+  url: string;
+  totalDuration: number;
+  totalDurationFormatted: string;
 }
 
 interface HeatmapData {
-  hour: number
-  dayOfWeek: number
-  totalDuration: number
-  topUrls: TopUrl[]
+  hour: number;
+  dayOfWeek: number;
+  totalDuration: number;
+  topUrls: TopUrl[];
 }
 
 interface ActivityHeatmapProps {
-  data: HeatmapData[]
+  data: HeatmapData[];
 }
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-const HOURS = Array.from({ length: 24 }, (_, i) => i)
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 function getIntensity(value: number, max: number): string {
-  if (max === 0 || value === 0) return "bg-muted"
-  const ratio = value / max
-  if (ratio < 0.2) return "bg-primary/20"
-  if (ratio < 0.4) return "bg-primary/40"
-  if (ratio < 0.6) return "bg-primary/60"
-  if (ratio < 0.8) return "bg-primary/80"
-  return "bg-primary"
+  if (max === 0 || value === 0) return "bg-muted";
+  const ratio = value / max;
+  if (ratio < 0.2) return "bg-primary/20";
+  if (ratio < 0.4) return "bg-primary/40";
+  if (ratio < 0.6) return "bg-primary/60";
+  if (ratio < 0.8) return "bg-primary/80";
+  return "bg-primary";
 }
 
 function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
+  if (!seconds) return "0s";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${secs}s`;
+  return `${secs}s`;
 }
 
 export function ActivityHeatmap({ data }: ActivityHeatmapProps) {
   // Build a map for quick lookup
-  const dataMap = new Map<string, HeatmapData>()
-  let maxDuration = 0
+  const dataMap = new Map<string, HeatmapData>();
+  let maxDuration = 0;
 
   data.forEach((item) => {
-    const key = `${item.dayOfWeek}-${item.hour}`
-    dataMap.set(key, item)
-    if (item.totalDuration > maxDuration) maxDuration = item.totalDuration
-  })
+    const key = `${item.dayOfWeek}-${item.hour}`;
+    dataMap.set(key, item);
+    if (item.totalDuration > maxDuration) maxDuration = item.totalDuration;
+  });
 
   return (
     <Card className="bg-card border-border">
@@ -82,7 +86,7 @@ export function ActivityHeatmap({ data }: ActivityHeatmapProps) {
             <TooltipProvider delayDuration={2000}>
               {DAYS.map((day, dayIndex) => {
                 // MongoDB dayOfWeek: 1=Sunday, 2=Monday, etc.
-                const mongoDay = dayIndex + 1
+                const mongoDay = dayIndex + 1;
                 return (
                   <div key={day} className="flex items-center gap-1 mb-1">
                     <div className="w-10 text-xs text-muted-foreground text-right pr-2">
@@ -90,10 +94,10 @@ export function ActivityHeatmap({ data }: ActivityHeatmapProps) {
                     </div>
                     <div className="flex flex-1 gap-0.5">
                       {HOURS.map((hour) => {
-                        const key = `${mongoDay}-${hour}`
-                        const item = dataMap.get(key)
-                        const duration = item?.totalDuration || 0
-                        const intensity = getIntensity(duration, maxDuration)
+                        const key = `${mongoDay}-${hour}`;
+                        const item = dataMap.get(key);
+                        const duration = item?.totalDuration || 0;
+                        const intensity = getIntensity(duration, maxDuration);
 
                         return (
                           <Tooltip key={hour}>
@@ -112,7 +116,9 @@ export function ActivityHeatmap({ data }: ActivityHeatmapProps) {
                                 </div>
                                 {item && item.topUrls.length > 0 && (
                                   <div className="space-y-1 pt-2 border-t border-border">
-                                    <div className="text-xs font-semibold text-foreground">Top URLs:</div>
+                                    <div className="text-xs font-semibold text-foreground">
+                                      Top URLs:
+                                    </div>
                                     <div className="max-h-[180px] overflow-y-auto pr-2 space-y-1">
                                       {item.topUrls.map((url, idx) => (
                                         <div key={idx} className="text-xs">
@@ -133,11 +139,11 @@ export function ActivityHeatmap({ data }: ActivityHeatmapProps) {
                               </div>
                             </TooltipContent>
                           </Tooltip>
-                        )
+                        );
                       })}
                     </div>
                   </div>
-                )
+                );
               })}
             </TooltipProvider>
 
@@ -158,5 +164,5 @@ export function ActivityHeatmap({ data }: ActivityHeatmapProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -1,64 +1,69 @@
-import { NextRequest, NextResponse } from "next/server"
-import { authenticateRequest } from "@/lib/auth"
-import { getTimeStats, getRecentActivity } from "@/lib/services/activity-service"
-import { logger } from "@/lib/logger"
+import { NextRequest, NextResponse } from "next/server";
+import { authenticateRequest } from "@/lib/auth";
+import {
+  getTimeStats,
+  getRecentActivity,
+} from "@/lib/services/activity-service";
+import { logger } from "@/lib/logger";
 
 function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`
-  }
-  return `${minutes}m`
+  if (!seconds) return "0s";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${secs}s`;
+  return `${secs}s`;
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization")
-    const user = await authenticateRequest(authHeader)
+    const authHeader = request.headers.get("authorization");
+    const user = await authenticateRequest(authHeader);
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url)
-    const range = searchParams.get("range") || "week"
+    const { searchParams } = new URL(request.url);
+    const range = searchParams.get("range") || "week";
 
     // Calculate date range
-    const endDate = new Date()
-    let startDate: Date
+    const endDate = new Date();
+    let startDate: Date;
 
     switch (range) {
       case "today":
-        startDate = new Date()
-        startDate.setHours(0, 0, 0, 0)
-        break
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0);
+        break;
       case "week":
-        startDate = new Date()
-        startDate.setDate(startDate.getDate() - 7)
-        startDate.setHours(0, 0, 0, 0)
-        break
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
+        break;
       case "month":
-        startDate = new Date()
-        startDate.setMonth(startDate.getMonth() - 1)
-        startDate.setHours(0, 0, 0, 0)
-        break
+        startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 1);
+        startDate.setHours(0, 0, 0, 0);
+        break;
       default:
-        startDate = new Date()
-        startDate.setDate(startDate.getDate() - 7)
-        startDate.setHours(0, 0, 0, 0)
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
     }
 
     const [stats, recentActivity] = await Promise.all([
       getTimeStats(user._id, startDate, endDate),
       getRecentActivity(user._id, 20),
-    ])
+    ]);
 
     logger.info("Stats fetched", {
       userId: user._id.toString(),
       endpoint: "/api/stats",
       meta: { range },
-    })
+    });
 
     return NextResponse.json({
       range,
@@ -114,11 +119,12 @@ export async function GET(request: NextRequest) {
             }
           : null,
       })),
-    })
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to fetch stats"
-    logger.error("Stats endpoint failed", { meta: { error: message } })
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch stats";
+    logger.error("Stats endpoint failed", { meta: { error: message } });
 
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

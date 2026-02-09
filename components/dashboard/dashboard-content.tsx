@@ -1,89 +1,97 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useAuth } from "@/lib/auth-context"
-import useSWR from "swr"
-import { Sidebar } from "./sidebar"
-import { DashboardHeader } from "./header"
-import { TimeRangeSelector } from "./time-range-selector"
-import { StatsCard } from "./stats-card"
-import { ProjectChart } from "./project-chart"
-import { DomainChart } from "./domain-chart"
-import { ActivityHeatmap } from "./activity-heatmap"
-import { ActivityFeed } from "./activity-feed"
-import { ProjectManager } from "./project-manager"
-import { TokenView } from "./token-view"
-import { PagesView } from "./pages-view"
-import { Clock, Globe, FolderOpen, FileText, Loader2 } from "lucide-react"
+import { useState } from "react";
+import { useAuth } from "@/lib/auth-context";
+import useSWR from "swr";
+import { Sidebar } from "./sidebar";
+import { DashboardHeader } from "./header";
+import { TimeRangeSelector } from "./time-range-selector";
+import { StatsCard } from "./stats-card";
+import { ProjectChart } from "./project-chart";
+import { DomainChart } from "./domain-chart";
+import { ActivityHeatmap } from "./activity-heatmap";
+import { ActivityFeed } from "./activity-feed";
+import { ProjectManager } from "./project-manager";
+import { TokenView } from "./token-view";
+import { PagesView } from "./pages-view";
+import { Clock, Globe, FolderOpen, FileText, Loader2 } from "lucide-react";
 
 interface Stats {
-  range: string
+  range: string;
   summary: {
-    totalDuration: number
-    totalDurationFormatted: string
-  }
+    totalDuration: number;
+    totalDurationFormatted: string;
+  };
   byProject: Array<{
-    projectId: string | null
-    projectName: string
-    color: string
-    totalDuration: number
-    totalDurationFormatted: string
-  }>
+    projectId: string | null;
+    projectName: string;
+    color: string;
+    totalDuration: number;
+    totalDurationFormatted: string;
+  }>;
   byDomain: Array<{
-    domain: string
-    totalDuration: number
-    totalDurationFormatted: string
-  }>
+    domain: string;
+    totalDuration: number;
+    totalDurationFormatted: string;
+  }>;
   heatmap: Array<{
-    hour: number
-    dayOfWeek: number
-    totalDuration: number
-  }>
+    hour: number;
+    dayOfWeek: number;
+    totalDuration: number;
+    topUrls: Array<{
+      title: string;
+      url: string;
+      totalDuration: number;
+      totalDurationFormatted: string;
+    }>;
+  }>;
   topPages: Array<{
-    pageId: string
-    title: string
-    url: string
-    domain: string
-    totalDuration: number
-    totalDurationFormatted: string
-  }>
+    pageId: string;
+    title: string;
+    url: string;
+    domain: string;
+    totalDuration: number;
+    totalDurationFormatted: string;
+  }>;
   recentActivity: Array<{
-    id: string
-    timestamp: string
-    duration: number
-    durationFormatted: string
-    domain: string
-    projectId: string | null
+    id: string;
+    timestamp: string;
+    duration: number;
+    durationFormatted: string;
+    domain: string;
+    projectId: string | null;
     page: {
-      title: string
-      url: string
-      domain: string
-    } | null
-  }>
+      title: string;
+      url: string;
+      domain: string;
+    } | null;
+  }>;
 }
 
 export function DashboardContent() {
-  const { token } = useAuth()
-  const [timeRange, setTimeRange] = useState("week")
-  const [currentView, setCurrentView] = useState("dashboard")
+  const { token } = useAuth();
+  const [timeRange, setTimeRange] = useState("week");
+  const [currentView, setCurrentView] = useState("dashboard");
 
   const fetcher = async (url: string) => {
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) throw new Error("Failed to fetch stats")
-    return res.json()
-  }
+    });
+    if (!res.ok) throw new Error("Failed to fetch stats");
+    return res.json();
+  };
 
-  const { data: stats, error, isLoading } = useSWR<Stats>(
-    token ? `/api/stats?range=${timeRange}` : null,
-    fetcher,
-    { refreshInterval: 60000 }
-  )
+  const {
+    data: stats,
+    error,
+    isLoading,
+  } = useSWR<Stats>(token ? `/api/stats?range=${timeRange}` : null, fetcher, {
+    refreshInterval: 60000,
+  });
 
-  const projectCount = stats?.byProject.filter((p) => p.projectId).length || 0
-  const domainCount = stats?.byDomain.length || 0
-  const pageCount = stats?.topPages.length || 0
+  const projectCount = stats?.byProject.filter((p) => p.projectId).length || 0;
+  const domainCount = stats?.byDomain.length || 0;
+  const pageCount = stats?.topPages.length || 0;
 
   const renderDashboard = () => {
     if (isLoading) {
@@ -91,7 +99,7 @@ export function DashboardContent() {
         <div className="flex items-center justify-center h-[calc(100vh-56px)]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      )
+      );
     }
 
     if (error) {
@@ -99,7 +107,7 @@ export function DashboardContent() {
         <div className="flex items-center justify-center h-[calc(100vh-56px)]">
           <p className="text-destructive">Failed to load dashboard data</p>
         </div>
-      )
+      );
     }
 
     return (
@@ -119,7 +127,7 @@ export function DashboardContent() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
           <StatsCard
             title="Total Time"
-            value={stats?.summary.totalDurationFormatted || "0m"}
+            value={stats?.summary.totalDurationFormatted || "0s"}
             description={`${timeRange === "today" ? "Today" : timeRange === "week" ? "This week" : "This month"}`}
             icon={Clock}
           />
@@ -159,8 +167,8 @@ export function DashboardContent() {
           <ProjectChart data={stats?.byProject || []} />
         </div>
       </>
-    )
-  }
+    );
+  };
 
   const renderContent = () => {
     switch (currentView) {
@@ -175,11 +183,11 @@ export function DashboardContent() {
             </div>
             <ProjectManager />
           </div>
-        )
+        );
       case "pages":
-        return <PagesView />
+        return <PagesView />;
       case "token":
-        return <TokenView />
+        return <TokenView />;
       case "settings":
         return (
           <div className="space-y-6">
@@ -191,11 +199,11 @@ export function DashboardContent() {
             </div>
             <p className="text-muted-foreground">Settings coming soon...</p>
           </div>
-        )
+        );
       default:
-        return renderDashboard()
+        return renderDashboard();
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -207,5 +215,5 @@ export function DashboardContent() {
         </main>
       </div>
     </div>
-  )
+  );
 }

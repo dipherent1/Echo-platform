@@ -42,14 +42,14 @@ interface PagesResponse {
 }
 
 function formatDuration(totalSeconds?: number) {
-  if (!totalSeconds) return "0s"
-  
-  const minutes = Math.floor(totalSeconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const seconds = Math.floor(totalSeconds % 60)
+  if (!totalSeconds) return "0s";
 
-  if (hours > 0) return `${hours}h ${minutes % 60}m`
-  if (minutes > 0) return `${minutes}m ${seconds}s`
+  const minutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+
+  if (hours > 0) return `${hours}h ${minutes % 60}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
   return `${seconds}s`;
 }
 

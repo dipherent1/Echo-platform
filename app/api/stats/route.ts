@@ -43,11 +43,6 @@ export async function GET(request: NextRequest) {
         startDate.setDate(startDate.getDate() - 7);
         startDate.setHours(0, 0, 0, 0);
         break;
-      case "month":
-        startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - 1);
-        startDate.setHours(0, 0, 0, 0);
-        break;
       default:
         startDate = new Date();
         startDate.setDate(startDate.getDate() - 7);

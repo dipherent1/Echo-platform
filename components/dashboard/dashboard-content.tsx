@@ -128,7 +128,7 @@ export function DashboardContent() {
           <StatsCard
             title="Total Time"
             value={stats?.summary.totalDurationFormatted || "0s"}
-            description={`${timeRange === "today" ? "Today" : timeRange === "week" ? "This week" : "This month"}`}
+            description={timeRange === "today" ? "Today" : "This week"}
             icon={Clock}
           />
           <StatsCard

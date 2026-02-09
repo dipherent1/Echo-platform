@@ -1,19 +1,18 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Calendar } from "lucide-react"
+import { Button } from "@/components/ui/button";
+import { Calendar } from "lucide-react";
 
 interface TimeRangeSelectorProps {
-  value: string
-  onChange: (value: string) => void
+  value: string;
+  onChange: (value: string) => void;
 }
 
 export function TimeRangeSelector({ value, onChange }: TimeRangeSelectorProps) {
   const ranges = [
     { key: "today", label: "Today" },
     { key: "week", label: "This Week" },
-    { key: "month", label: "This Month" },
-  ]
+  ];
 
   return (
     <div className="flex items-center gap-2">
@@ -32,5 +31,5 @@ export function TimeRangeSelector({ value, onChange }: TimeRangeSelectorProps) {
         ))}
       </div>
     </div>
-  )
+  );
 }

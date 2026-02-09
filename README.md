@@ -37,10 +37,10 @@ Continue building your app on:
 - [x] stop token regeneration when user login
 - [x] update instruction for loading extentions
 - [x] add filter to site pages
-- [ ] fix the heat map content to only show the pages and total time
+- [x] fix the heat map content to only show the pages and total time
+- [x] fix sidebar
 - [ ] remove monthly features
 - [ ] add project functionality
 - [ ] deal with token limit
-- [ ] fix sidebar
 - [ ] migrate to better auth
 - [ ] clean up the extention

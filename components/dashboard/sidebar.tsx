@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useAuth } from "@/lib/auth-context"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { useState } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Activity,
   BarChart3,
@@ -13,11 +13,11 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-} from "lucide-react"
+} from "lucide-react";
 
 interface SidebarProps {
-  currentView: string
-  onViewChange: (view: string) => void
+  currentView: string;
+  onViewChange: (view: string) => void;
 }
 
 const navItems = [
@@ -26,16 +26,16 @@ const navItems = [
   { id: "pages", label: "Pages", icon: FileText },
   { id: "token", label: "API Token", icon: Key },
   { id: "settings", label: "Settings", icon: Settings },
-]
+];
 
 export function Sidebar({ currentView, onViewChange }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <aside
       className={cn(
-        "flex flex-col border-r border-border bg-sidebar transition-all duration-300",
-        collapsed ? "w-16" : "w-56"
+        "sticky top-0 h-screen flex flex-col border-r border-border bg-sidebar transition-all duration-300 overflow-y-auto",
+        collapsed ? "w-16" : "w-56",
       )}
     >
       {/* Logo */}
@@ -71,8 +71,8 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       <nav className="flex-1 p-2">
         <ul className="space-y-1">
           {navItems.map((item) => {
-            const Icon = item.icon
-            const isActive = currentView === item.id
+            const Icon = item.icon;
+            const isActive = currentView === item.id;
             return (
               <li key={item.id}>
                 <button
@@ -81,17 +81,17 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
                     "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-primary"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   )}
                 >
                   <Icon className="h-4 w-4 flex-shrink-0" />
                   {!collapsed && <span>{item.label}</span>}
                 </button>
               </li>
-            )
+            );
           })}
         </ul>
       </nav>
     </aside>
-  )
+  );
 }

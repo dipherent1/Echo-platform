@@ -1,14 +1,14 @@
-import { ObjectId } from "mongodb"
-import { getDb } from "../db"
-import type { Page } from "../types"
-import { logger } from "../logger"
+import { ObjectId } from "mongodb";
+import { getDb } from "../db";
+import type { Page } from "../types";
+import { logger } from "../logger";
 
 export function extractDomain(url: string): string {
   try {
-    const urlObj = new URL(url)
-    return urlObj.hostname
+    const urlObj = new URL(url);
+    return urlObj.hostname;
   } catch {
-    return url
+    return url;
   }
 }
 
@@ -16,11 +16,11 @@ export async function upsertPage(
   userId: ObjectId,
   url: string,
   title: string,
-  description?: string
+  description?: string,
 ): Promise<Page> {
-  const db = await getDb()
-  const domain = extractDomain(url)
-  const now = new Date()
+  const db = await getDb();
+  const domain = extractDomain(url);
+  const now = new Date();
 
   const result = await db.collection<Page>("pages").findOneAndUpdate(
     { userId, url },
@@ -43,55 +43,104 @@ export async function upsertPage(
         },
       },
     },
-    { upsert: true, returnDocument: "after" }
-  )
+    { upsert: true, returnDocument: "after" },
+  );
 
   if (!result) {
-    throw new Error("Failed to upsert page")
+    throw new Error("Failed to upsert page");
   }
 
   logger.info("Page upserted", {
     userId: userId.toString(),
     meta: { url, domain },
-  })
+  });
 
-  return result
+  return result;
 }
 
 export async function getPages(
   userId: ObjectId,
   page: number = 1,
-  limit: number = 20
-): Promise<{ pages: Page[]; total: number; page: number; totalPages: number }> {
-  const db = await getDb()
-  const skip = (page - 1) * limit
+  limit: number = 20,
+  sortBy: "lastSeenAt" | "totalDuration" = "lastSeenAt",
+  sortOrder: "asc" | "desc" = "desc",
+): Promise<{
+  pages: (Page & { totalDuration?: number })[];
+  total: number;
+  page: number;
+  totalPages: number;
+}> {
+  const db = await getDb();
+  const skip = (page - 1) * limit;
+  const sortDirection = sortOrder === "asc" ? 1 : -1;
 
-  const [pages, total] = await Promise.all([
-    db
+  let pages: (Page & { totalDuration?: number })[];
+  let total: number;
+
+  if (sortBy === "totalDuration") {
+    const pipeline = [
+      { $match: { userId } },
+      {
+        $lookup: {
+          from: "activity_logs",
+          localField: "_id",
+          foreignField: "pageId",
+          as: "activities",
+        },
+      },
+      {
+        $addFields: {
+          totalDuration: { $sum: "$activities.duration" },
+        },
+      },
+      { $sort: { totalDuration: sortDirection } },
+      { $project: { activities: 0 } },
+      {
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [{ $skip: skip }, { $limit: limit }],
+        },
+      },
+    ];
+
+    const result = await db
       .collection<Page>("pages")
-      .find({ userId })
-      .sort({ lastSeenAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray(),
-    db.collection<Page>("pages").countDocuments({ userId }),
-  ])
+      .aggregate(pipeline)
+      .toArray();
+
+    pages = result[0].data;
+    total = result[0].metadata[0]?.total || 0;
+  } else {
+    // Standard fetch
+    const [p, t] = await Promise.all([
+      db
+        .collection<Page>("pages")
+        .find({ userId })
+        .sort({ [sortBy]: sortDirection })
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+      db.collection<Page>("pages").countDocuments({ userId }),
+    ]);
+    pages = p;
+    total = t;
+  }
 
   return {
     pages,
     total,
     page,
     totalPages: Math.ceil(total / limit),
-  }
+  };
 }
 
 export async function searchPages(
   userId: ObjectId,
   query: string,
-  limit: number = 10
-): Promise<Page[]> {
-  const db = await getDb()
-  
+  limit: number = 10,
+): Promise<(Page & { totalDuration?: number })[]> {
+  const db = await getDb();
+
   return db
     .collection<Page>("pages")
     .find({
@@ -104,5 +153,5 @@ export async function searchPages(
     })
     .sort({ lastSeenAt: -1 })
     .limit(limit)
-    .toArray()
+    .toArray();
 }

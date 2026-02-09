@@ -35,11 +35,12 @@ Continue building your app on:
 - [x] enhance ai feature
 - [x] the pie chart should only show top 9 plus others
 - [x] stop token regeneration when user login
-- [ ] update instruction for loading extentions
-- [ ] add filter to site pages
+- [x] update instruction for loading extentions
+- [x] add filter to site pages
+- [ ] fix the heat map content to only show the pages and total time
 - [ ] remove monthly features
+- [ ] add project functionality
 - [ ] deal with token limit
-- [ ] fix the heat map content to only show the pages
 - [ ] fix sidebar
-- [ ] clean up the extention
 - [ ] migrate to better auth
+- [ ] clean up the extention

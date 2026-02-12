@@ -40,7 +40,7 @@ function OnboardingContent() {
 
   // Auto-generate token on first load if not present (simulated by just generating one for the user to see)
   // or wait for them to click. It's better to let them click so they know what follows.
-  
+
   // If user is not logged in, show auth form or redirect
   if (isLoading) {
     return (
@@ -120,8 +120,8 @@ function OnboardingContent() {
               {!newToken ? (
                 <div className="flex flex-col items-center justify-center h-40 space-y-4 border rounded-md border-dashed bg-secondary/30 p-4 text-center">
                   <p className="text-sm text-muted-foreground">
-                    Generate your unique access token to connect the extension to
-                    your account.
+                    Generate your unique access token to connect the extension
+                    to your account.
                   </p>
                   <Button onClick={handleGenerate} disabled={regenerating}>
                     {regenerating ? (
@@ -159,7 +159,7 @@ function OnboardingContent() {
                         className="h-7 w-7"
                         onClick={() => setShowToken(!showToken)}
                       >
-                       {showToken ? (
+                        {showToken ? (
                           <EyeOff className="h-4 w-4" />
                         ) : (
                           <Eye className="h-4 w-4" />
@@ -172,7 +172,7 @@ function OnboardingContent() {
                         className="h-7 w-7"
                         onClick={copyToken}
                       >
-                         {copied ? (
+                        {copied ? (
                           <Check className="h-4 w-4" />
                         ) : (
                           <Copy className="h-4 w-4" />
@@ -221,16 +221,24 @@ function OnboardingContent() {
                 <li className="flex gap-3">
                   <Chrome className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                   <span>
-                    Go to <code className="bg-muted px-1 py-0.5 rounded">chrome://extensions/</code>
+                    Go to{" "}
+                    <code className="bg-muted px-1 py-0.5 rounded">
+                      chrome://extensions/
+                    </code>
                   </span>
                 </li>
                 <li className="flex gap-3">
                   <Settings className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                  <span>Enable <strong>Developer mode</strong> (top right toggle)</span>
+                  <span>
+                    Enable <strong>Developer mode</strong> (top right toggle)
+                  </span>
                 </li>
                 <li className="flex gap-3">
                   <Terminal className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                  <span>Click <strong>Load unpacked</strong> and select the cloned folder</span>
+                  <span>
+                    Click <strong>Load unpacked</strong> and select the cloned
+                    folder
+                  </span>
                 </li>
               </ol>
 
@@ -246,11 +254,16 @@ function OnboardingContent() {
         </div>
 
         <div className="flex justify-center pt-4">
-          <Button size="lg" className="gap-2" onClick={handleComplete} disabled={completing}>
+          <Button
+            size="lg"
+            className="gap-2"
+            onClick={handleComplete}
+            disabled={completing}
+          >
             {completing ? (
               <>
-                 <Loader2 className="h-4 w-4 animate-spin" />
-                 Finishing...
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Finishing...
               </>
             ) : (
               <>

@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       username: user.username,
       tokenCreatedAt: user.tokenCreatedAt,
       tokenLastUsedAt: user.tokenLastUsedAt,
+      hasOnboarded: user.hasOnboarded || false,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Validation failed"

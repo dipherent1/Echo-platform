@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       success: true,
       userId: user._id.toString(),
       token,
+      hasOnboarded: false,
       message: "User created successfully. Save this token for API access.",
     })
   } catch (error) {

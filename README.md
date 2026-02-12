@@ -41,7 +41,11 @@ Continue building your app on:
 - [x] fix sidebar
 - [x] remove monthly features
 - [x] add project functionality
-- [ ] deal with token limit
+- [ ] onboarding page
+- [ ] filter by date
+- [ ] start and end date filter for page
+- [ ] deal with token limit and history
+- [ ] Fix time stamp
 - [ ] migrate to better auth
 - [ ] clean up the extention
 - [ ] enhance security for cronjob to delete data

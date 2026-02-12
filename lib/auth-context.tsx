@@ -7,6 +7,7 @@ interface User {
   username: string
   tokenCreatedAt: string | null
   tokenLastUsedAt: string | null
+  hasOnboarded: boolean
 }
 
 interface AuthContextType {
@@ -17,6 +18,7 @@ interface AuthContextType {
   register: (username: string, password: string) => Promise<void>
   logout: () => void
   regenerateToken: () => Promise<string>
+  completeOnboarding: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -38,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           username: data.username,
           tokenCreatedAt: data.tokenCreatedAt,
           tokenLastUsedAt: data.tokenLastUsedAt,
+          hasOnboarded: data.hasOnboarded,
         })
         setToken(storedToken)
       } else {
@@ -75,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       username,
       tokenCreatedAt: new Date().toISOString(),
       tokenLastUsedAt: null,
+      hasOnboarded: data.hasOnboarded,
     })
   }
 
@@ -94,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       username,
       tokenCreatedAt: new Date().toISOString(),
       tokenLastUsedAt: null,
+      hasOnboarded: data.hasOnboarded || false,
     })
   }
 
@@ -122,9 +127,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.token
   }
 
+  const completeOnboarding = async () => {
+    if (!token) throw new Error("Not authenticated")
+
+    const res = await fetch("/api/auth/complete-onboarding", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    })
+    
+    if (!res.ok) {
+       const data = await res.json()
+       throw new Error(data.error)
+    }
+
+    if (user) {
+      setUser({ ...user, hasOnboarded: true })
+    }
+  }
+
   return (
     <AuthContext.Provider
-      value={{ user, token, isLoading, login, register, logout, regenerateToken }}
+      value={{ user, token, isLoading, login, register, logout, regenerateToken, completeOnboarding }}
     >
       {children}
     </AuthContext.Provider>

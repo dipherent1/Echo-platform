@@ -8,6 +8,7 @@ export interface User {
   sessionTokenHash: string | null;
   tokenCreatedAt: Date | null;
   tokenLastUsedAt: Date | null;
+  hasOnboarded: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

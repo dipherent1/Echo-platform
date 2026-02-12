@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       success: true,
       userId: user._id.toString(),
       token,
+      hasOnboarded: user.hasOnboarded || false,
       message: "Login successful. This is your API token.",
     })
   } catch (error) {

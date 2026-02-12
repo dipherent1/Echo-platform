@@ -40,6 +40,7 @@ export async function createUser(
     sessionTokenHash, // Dashboard Session Token Hash
     tokenCreatedAt: now,
     tokenLastUsedAt: null,
+    hasOnboarded: false,
     createdAt: now,
     updatedAt: now,
   };

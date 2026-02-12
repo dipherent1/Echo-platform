@@ -30,23 +30,31 @@ export async function GET(request: NextRequest) {
     const range = searchParams.get("range") || "week";
 
     // Calculate date range
-    const endDate = new Date();
+    let endDate = new Date();
     let startDate: Date;
 
-    switch (range) {
-      case "today":
-        startDate = new Date();
+    if (range === "today") {
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+    } else if (range === "week") {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      // Try to parse as specific date (yyyy-MM-dd)
+      const parsedDate = new Date(range);
+      if (!isNaN(parsedDate.getTime())) {
+        startDate = parsedDate;
         startDate.setHours(0, 0, 0, 0);
-        break;
-      case "week":
+
+        endDate = new Date(parsedDate);
+        endDate.setHours(23, 59, 59, 999);
+      } else {
+        // Fallback to week
         startDate = new Date();
         startDate.setDate(startDate.getDate() - 7);
         startDate.setHours(0, 0, 0, 0);
-        break;
-      default:
-        startDate = new Date();
-        startDate.setDate(startDate.getDate() - 7);
-        startDate.setHours(0, 0, 0, 0);
+      }
     }
 
     const [stats, recentActivity] = await Promise.all([

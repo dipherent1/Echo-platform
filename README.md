@@ -42,7 +42,7 @@ Continue building your app on:
 - [x] remove monthly features
 - [x] add project functionality
 - [ ] onboarding page
-- [ ] filter by date
+- [x] filter by date
 - [ ] start and end date filter for page
 - [ ] deal with token limit and history
 - [ ] Fix time stamp

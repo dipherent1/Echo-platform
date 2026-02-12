@@ -41,9 +41,9 @@ Continue building your app on:
 - [x] fix sidebar
 - [x] remove monthly features
 - [x] add project functionality
-- [ ] onboarding page
+- [x] onboarding page
 - [x] filter by date
-- [ ] start and end date filter for page
+- [x] start and end date filter for page
 - [ ] deal with token limit and history
 - [ ] Fix time stamp
 - [ ] migrate to better auth

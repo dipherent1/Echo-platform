@@ -30,9 +30,9 @@ export async function GET(request: NextRequest) {
       // but we could pass it if we updated searchPages too.
       // For now, let's keep search simple or update it if needed.
       // The user asked for "filter to pages view", which implies the main list.
-      const pages = await searchPages(user._id, query, limit);
+      const result = await searchPages(user._id, query, page, limit);
       return NextResponse.json({
-        pages: pages.map((p) => ({
+        pages: result.pages.map((p) => ({
           id: p._id.toString(),
           url: p.url,
           domain: p.domain,
@@ -42,6 +42,12 @@ export async function GET(request: NextRequest) {
           lastSeenAt: p.lastSeenAt,
           totalDuration: p.totalDuration,
         })),
+        pagination: {
+          page: result.page,
+          limit,
+          total: result.total,
+          totalPages: result.totalPages,
+        },
         query,
       });
     }

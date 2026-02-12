@@ -1,25 +1,30 @@
-import { ObjectId } from "mongodb"
-import { getDb } from "../db"
-import type { ActivityLog, LogPayload, Page } from "../types"
-import { logger } from "../logger"
-import { upsertPage, extractDomain } from "./page-service"
-import { getProjects, matchProjectRules } from "./project-service"
+import { ObjectId } from "mongodb";
+import { getDb } from "../db";
+import type { ActivityLog, LogPayload, Page } from "../types";
+import { logger } from "../logger";
+import { upsertPage, extractDomain } from "./page-service";
+import { getProjects, matchProjectRules } from "./project-service";
 
 export async function createActivityLog(
   userId: ObjectId,
-  payload: LogPayload
+  payload: LogPayload,
 ): Promise<ActivityLog> {
-  const db = await getDb()
+  const db = await getDb();
 
   // Extract domain from URL
-  const domain = extractDomain(payload.url)
+  const domain = extractDomain(payload.url);
 
   // Upsert the page
-  const page: Page = await upsertPage(userId, payload.url, payload.title, payload.description)
+  const page: Page = await upsertPage(
+    userId,
+    payload.url,
+    payload.title,
+    payload.description,
+  );
 
   // Get user projects and match rules
-  const projects = await getProjects(userId)
-  const projectId = matchProjectRules(projects, payload.url, domain)
+  const projects = await getProjects(userId);
+  const projectId = matchProjectRules(projects, payload.url, domain);
 
   // Create activity log
   const activityLog: Omit<ActivityLog, "_id"> = {
@@ -36,23 +41,25 @@ export async function createActivityLog(
         clientId: payload.source?.clientId || null,
       },
     },
-  }
+  };
 
-  const result = await db.collection<ActivityLog>("activity_logs").insertOne(activityLog as ActivityLog)
+  const result = await db
+    .collection<ActivityLog>("activity_logs")
+    .insertOne(activityLog as ActivityLog);
 
   logger.info("Activity log created", {
     userId: userId.toString(),
     meta: { url: payload.url, domain, duration: payload.duration },
-  })
+  });
 
-  return { ...activityLog, _id: result.insertedId } as ActivityLog
+  return { ...activityLog, _id: result.insertedId } as ActivityLog;
 }
 
 export async function getRecentActivity(
   userId: ObjectId,
-  limit: number = 20
+  limit: number = 20,
 ): Promise<Array<ActivityLog & { page?: Page }>> {
-  const db = await getDb()
+  const db = await getDb();
 
   const logs = await db
     .collection<ActivityLog>("activity_logs")
@@ -70,25 +77,41 @@ export async function getRecentActivity(
       },
       { $unwind: { path: "$page", preserveNullAndEmptyArrays: true } },
     ])
-    .toArray()
+    .toArray();
 
-  return logs as Array<ActivityLog & { page?: Page }>
+  return logs as Array<ActivityLog & { page?: Page }>;
 }
 
 export interface TimeStats {
-  totalDuration: number
-  byProject: Array<{ projectId: ObjectId | null; projectName: string | null; color: string | null; totalDuration: number }>
-  byDomain: Array<{ domain: string; totalDuration: number }>
-  byHour: Array<{ hour: number; dayOfWeek: number; totalDuration: number; topUrls: Array<{ title: string; url: string; totalDuration: number }> }>
-  topPages: Array<{ pageId: ObjectId; title: string; url: string; domain: string; totalDuration: number }>
+  totalDuration: number;
+  byProject: Array<{
+    projectId: ObjectId | null;
+    projectName: string | null;
+    color: string | null;
+    totalDuration: number;
+  }>;
+  byDomain: Array<{ domain: string; totalDuration: number }>;
+  byHour: Array<{
+    hour: number;
+    dayOfWeek: number;
+    totalDuration: number;
+    topUrls: Array<{ title: string; url: string; totalDuration: number }>;
+  }>;
+  topPages: Array<{
+    pageId: ObjectId;
+    title: string;
+    url: string;
+    domain: string;
+    totalDuration: number;
+  }>;
 }
 
 export async function getTimeStats(
   userId: ObjectId,
   startDate: Date,
-  endDate: Date
+  endDate: Date,
 ): Promise<TimeStats> {
-  const db = await getDb()
+  const db = await getDb();
 
   // Total duration
   const totalResult = await db
@@ -102,9 +125,9 @@ export async function getTimeStats(
       },
       { $group: { _id: null, totalDuration: { $sum: "$duration" } } },
     ])
-    .toArray()
+    .toArray();
 
-  const totalDuration = totalResult[0]?.totalDuration || 0
+  const totalDuration = totalResult[0]?.totalDuration || 0;
 
   // By project
   const byProject = await db
@@ -141,7 +164,7 @@ export async function getTimeStats(
       },
       { $sort: { totalDuration: -1 } },
     ])
-    .toArray()
+    .toArray();
 
   // By domain
   const byDomain = await db
@@ -168,7 +191,7 @@ export async function getTimeStats(
       { $sort: { totalDuration: -1 } },
       { $limit: 10 },
     ])
-    .toArray()
+    .toArray();
 
   // By hour (for heatmap) - with top URLs
   const byHourDetails = await db
@@ -220,37 +243,40 @@ export async function getTimeStats(
         },
       },
     ])
-    .toArray()
+    .toArray();
 
   // Process the URLs: aggregate by URL and sort by total duration
   const byHour = byHourDetails.map((item: any) => {
-    const urlMap = new Map<string, { title: string; url: string; totalDuration: number }>()
-    
+    const urlMap = new Map<
+      string,
+      { title: string; url: string; totalDuration: number }
+    >();
+
     item.urls.forEach((u: any) => {
-      const key = u.url
+      const key = u.url;
       if (urlMap.has(key)) {
-        const existing = urlMap.get(key)!
-        existing.totalDuration += u.duration
+        const existing = urlMap.get(key)!;
+        existing.totalDuration += u.duration;
       } else {
         urlMap.set(key, {
           title: u.title,
           url: u.url,
           totalDuration: u.duration,
-        })
+        });
       }
-    })
+    });
 
     const topUrls = Array.from(urlMap.values())
       .sort((a, b) => b.totalDuration - a.totalDuration)
-      .slice(0, 5)
+      .slice(0, 5);
 
     return {
       hour: item.hour,
       dayOfWeek: item.dayOfWeek,
       totalDuration: item.totalDuration,
       topUrls,
-    }
-  })
+    };
+  });
 
   // Top pages
   const topPages = await db
@@ -289,7 +315,7 @@ export async function getTimeStats(
       { $sort: { totalDuration: -1 } },
       { $limit: 10 },
     ])
-    .toArray()
+    .toArray();
 
   return {
     totalDuration,
@@ -297,5 +323,75 @@ export async function getTimeStats(
     byDomain: byDomain as TimeStats["byDomain"],
     byHour: byHour as TimeStats["byHour"],
     topPages: topPages as TimeStats["topPages"],
-  }
+  };
+}
+
+export async function getPageStats(
+  userId: ObjectId,
+  pageId: ObjectId,
+  startDate: Date,
+  endDate: Date,
+) {
+  const db = await getDb();
+
+  const stats = await db
+    .collection<ActivityLog>("activity_logs")
+    .aggregate([
+      {
+        $match: {
+          "metadata.userId": new ObjectId(userId),
+          pageId: new ObjectId(pageId),
+          timestamp: { $gte: startDate, $lte: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalDuration: { $sum: "$duration" },
+          count: { $sum: 1 },
+          firstVisit: { $min: "$timestamp" },
+          lastVisit: { $max: "$timestamp" },
+        },
+      },
+    ])
+    .toArray();
+
+  const dailyStats = await db
+    .collection<ActivityLog>("activity_logs")
+    .aggregate([
+      {
+        $match: {
+          "metadata.userId": new ObjectId(userId),
+          pageId: new ObjectId(pageId),
+          timestamp: { $gte: startDate, $lte: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$timestamp" },
+          },
+          duration: { $sum: "$duration" },
+        },
+      },
+      { $sort: { _id: 1 } },
+      {
+        $project: {
+          date: "$_id",
+          duration: 1,
+          _id: 0,
+        },
+      },
+    ])
+    .toArray();
+
+  return {
+    summary: stats[0] || {
+      totalDuration: 0,
+      count: 0,
+      firstVisit: null,
+      lastVisit: null,
+    },
+    daily: dailyStats,
+  };
 }

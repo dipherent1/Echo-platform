@@ -137,21 +137,41 @@ export async function getPages(
 export async function searchPages(
   userId: ObjectId,
   query: string,
+  page: number = 1,
   limit: number = 10,
-): Promise<(Page & { totalDuration?: number })[]> {
+): Promise<{
+  pages: (Page & { totalDuration?: number })[];
+  total: number;
+  page: number;
+  totalPages: number;
+}> {
   const db = await getDb();
+  const skip = (page - 1) * limit;
 
-  return db
-    .collection<Page>("pages")
-    .find({
-      userId,
-      $or: [
-        { title: { $regex: query, $options: "i" } },
-        { url: { $regex: query, $options: "i" } },
-        { domain: { $regex: query, $options: "i" } },
-      ],
-    })
-    .sort({ lastSeenAt: -1 })
-    .limit(limit)
-    .toArray();
+  const filter = {
+    userId,
+    $or: [
+      { title: { $regex: query, $options: "i" } },
+      { url: { $regex: query, $options: "i" } },
+      { domain: { $regex: query, $options: "i" } },
+    ],
+  };
+
+  const [pages, total] = await Promise.all([
+    db
+      .collection<Page>("pages")
+      .find(filter)
+      .sort({ lastSeenAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray(),
+    db.collection<Page>("pages").countDocuments(filter),
+  ]);
+
+  return {
+    pages,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  };
 }
